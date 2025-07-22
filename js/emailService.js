@@ -3,6 +3,19 @@ let EMAILJS_SERVICE_ID = 'service_puww2kb';
 let EMAILJS_TEMPLATE_ID = 'template_zh8jess';
 let EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
 
+// Template IDs for different email types
+const EMAIL_TEMPLATE_IDS = {
+  bookingRequestReceived: 'template_1qnwhwc', // Email 1: Booking Request Received
+  therapistRequest: 'template_zh8jess', // Replace with Email 2 template ID
+  clientAcceptance: 'template_zh8jess', // Replace with Email 3 template ID
+  therapistAcceptance: 'template_zh8jess', // Replace with Email 4 template ID
+  clientDecline: 'template_zh8jess', // Replace with Email 5 template ID
+  alternateTherapistRequest: 'template_zh8jess', // Replace with Email 6 template ID
+  clientAcceptanceAlt: 'template_zh8jess', // Replace with Email 7 template ID
+  therapistAcceptanceAlt: 'template_zh8jess', // Replace with Email 8 template ID
+  clientFinalDecline: 'template_zh8jess' // Replace with Email 9 template ID
+};
+
 // Initialize EmailJS when the script loads
 (function() {
   // Wait for EmailJS to be available
@@ -30,50 +43,105 @@ let EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
 
 // Email service functions
 const EmailService = {
-  // Send booking request confirmation to client
+  // Send Email 1: Booking Request Received to Client
+  async sendBookingRequestReceived(bookingData) {
+    console.log('📧 Sending Email 1 - Booking Request Received', bookingData);
+    
+    try {
+      // Prepare template parameters for EmailJS
+      const templateParams = {
+        to_email: bookingData.customer_email,
+        to_name: bookingData.customer_name,
+        customer_name: bookingData.customer_name,
+        customer_email: bookingData.customer_email,
+        customer_phone: bookingData.customer_phone,
+        booking_id: bookingData.booking_id,
+        business_name: bookingData.business_name || 'Rydges South Bank Brisbane',
+        address: bookingData.address,
+        service_name: bookingData.service_name,
+        therapist_name: bookingData.therapist_name || 'Jane test',
+        gender_preference: bookingData.gender_preference || 'Don\'t mind just want a great massage',
+        alternate_therapist_ok: bookingData.alternate_therapist_ok ? 'Yes' : 'No',
+        duration_minutes: bookingData.duration_minutes,
+        booking_date: bookingData.booking_date,
+        booking_time: bookingData.booking_time,
+        room_number: bookingData.room_number || '123',
+        booker_name: bookingData.booker_name || 'Aidan Test',
+        notes: bookingData.notes || 'Access via lift 2, ive got a bad back ache',
+        total_price: bookingData.total_price || '$159.00',
+        email_type: 'booking_request_received'
+      };
+
+      // Send email using EmailJS
+      const response = await emailjs.send(
+        EMAILJS_SERVICE_ID, 
+        EMAIL_TEMPLATE_IDS.bookingRequestReceived, 
+        templateParams
+      );
+
+      console.log('✅ Email 1 sent successfully:', response);
+
+      // Save email record to database
+      const { data, error } = await supabase
+        .from('email_logs')
+        .insert([
+          {
+            booking_id: bookingData.booking_id,
+            email_type: 'booking_request_received',
+            recipient_email: bookingData.customer_email,
+            subject: '📧 Booking Request Received',
+            html_content: 'Email sent via EmailJS template',
+            sent_at: new Date().toISOString(),
+            status: 'sent'
+          }
+        ]);
+
+      if (error) {
+        console.error('Error saving email log:', error);
+        // Don't throw error here as email was sent successfully
+      }
+
+      return {
+        success: true,
+        emailId: data?.[0]?.id,
+        message: 'Email 1 sent successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Error sending Email 1:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  // Send booking request confirmation to client (legacy function - now uses new template)
   async sendClientConfirmation(bookingData) {
     console.log('📧 Attempting to send client confirmation email...', bookingData);
     
-    const templateParams = {
-      to_email: bookingData.customer_email,
-      to_name: bookingData.customer_name,
+    // Transform booking data to match new template format
+    const transformedData = {
+      customer_name: bookingData.customer_name,
+      customer_email: bookingData.customer_email,
+      customer_phone: bookingData.customer_phone,
       booking_id: bookingData.booking_id,
       service_name: bookingData.service_name,
-      duration: bookingData.duration_minutes,
-      date: bookingData.booking_time,
+      duration_minutes: bookingData.duration_minutes,
+      booking_date: bookingData.booking_time ? new Date(bookingData.booking_time).toISOString().split('T')[0] : '2025-07-01',
+      booking_time: bookingData.booking_time ? new Date(bookingData.booking_time).toTimeString().slice(0, 5) : '09:00',
       address: bookingData.address,
-      room_number: bookingData.room_number || 'N/A',
-      price: bookingData.price,
-      email_type: 'client_confirmation'
+      room_number: bookingData.room_number || '123',
+      business_name: 'Rydges South Bank Brisbane',
+      therapist_name: bookingData.therapist_name || 'Jane test',
+      gender_preference: 'Don\'t mind just want a great massage',
+      alternate_therapist_ok: true,
+      booker_name: 'Aidan Test',
+      notes: 'Access via lift 2, ive got a bad back ache',
+      total_price: bookingData.price || '$159.00'
     };
 
-    console.log('📧 EmailJS config:', {
-      service_id: EMAILJS_SERVICE_ID,
-      template_id: EMAILJS_TEMPLATE_ID,
-      public_key: EMAILJS_PUBLIC_KEY
-    });
-
-    try {
-      if (typeof emailjs === 'undefined') {
-        throw new Error('EmailJS not loaded');
-      }
-      
-      // Re-initialize EmailJS to ensure it's ready
-      console.log('🔄 Initializing EmailJS...');
-      emailjs.init(EMAILJS_PUBLIC_KEY);
-      
-      const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-      console.log('✅ Client confirmation email sent successfully:', response);
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Error sending client confirmation email:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response
-      });
-      return { success: false, error };
-    }
+    return await this.sendBookingRequestReceived(transformedData);
   },
 
   // Send booking request to therapists

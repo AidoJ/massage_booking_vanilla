@@ -1355,9 +1355,9 @@ async function sendBookingNotifications(bookingData, bookingId) {
       price: bookingData.price
     };
 
-    // Send confirmation email to client only
-    const clientResult = await window.EmailService.sendClientConfirmation(emailData);
-    console.log('Client confirmation result:', clientResult);
+    // Send Email 1: Booking Request Received to client
+    const clientResult = await window.EmailService.sendBookingRequestReceived(emailData);
+    console.log('Email 1 - Booking Request Received result:', clientResult);
     
     return clientResult;
 
