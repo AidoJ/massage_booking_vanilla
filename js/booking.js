@@ -55,6 +55,43 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Initial state: show only the first step
   showStep('step1');
+  
+  // Load all data in parallel for better performance
+  console.log('🔄 Loading initial data...');
+  
+  // Show loading indicator
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'loading-indicator';
+  loadingDiv.innerHTML = `
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+      <div style="text-align: center;">
+        <div class="egg-timer" style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+        <div>Loading booking system...</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(loadingDiv);
+  
+  Promise.all([
+    populateTherapyOptions(),
+    fetchPricingData(),
+    fetchSettings()
+  ]).then(() => {
+    console.log('✅ All data loaded successfully');
+    setupPriceListeners();
+    // Remove loading indicator
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.remove();
+    }
+  }).catch(error => {
+    console.error('❌ Error loading initial data:', error);
+    // Remove loading indicator even on error
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.remove();
+    }
+  });
 
   // Next buttons
   document.querySelectorAll('.btn.next').forEach(btn => {

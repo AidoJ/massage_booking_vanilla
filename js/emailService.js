@@ -1,17 +1,25 @@
-// EmailJS configuration
-const EMAILJS_SERVICE_ID = 'service_puww2kb';
-const EMAILJS_TEMPLATE_ID = 'template_zh8jess';
-const EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
+// EmailJS configuration - will be set from environment variables
+let EMAILJS_SERVICE_ID = 'service_puww2kb';
+let EMAILJS_TEMPLATE_ID = 'template_zh8jess';
+let EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
 
-// Initialize EmailJS
+// Initialize EmailJS when the script loads
 (function() {
-  emailjs.init(EMAILJS_PUBLIC_KEY);
+  // Wait for EmailJS to be available
+  if (typeof emailjs !== 'undefined') {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    console.log('✅ EmailJS initialized successfully');
+  } else {
+    console.error('❌ EmailJS not loaded');
+  }
 })();
 
 // Email service functions
 const EmailService = {
   // Send booking request confirmation to client
   async sendClientConfirmation(bookingData) {
+    console.log('📧 Attempting to send client confirmation email...', bookingData);
+    
     const templateParams = {
       to_email: bookingData.customer_email,
       to_name: bookingData.customer_name,
@@ -25,12 +33,22 @@ const EmailService = {
       email_type: 'client_confirmation'
     };
 
+    console.log('📧 EmailJS config:', {
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: EMAILJS_TEMPLATE_ID,
+      public_key: EMAILJS_PUBLIC_KEY
+    });
+
     try {
+      if (typeof emailjs === 'undefined') {
+        throw new Error('EmailJS not loaded');
+      }
+      
       const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-      console.log('Client confirmation email sent:', response);
+      console.log('✅ Client confirmation email sent successfully:', response);
       return { success: true };
     } catch (error) {
-      console.error('Error sending client confirmation email:', error);
+      console.error('❌ Error sending client confirmation email:', error);
       return { success: false, error };
     }
   },
