@@ -1066,14 +1066,24 @@ if (customerEmailInput) {
   customerEmailInput.addEventListener('blur', async function () {
     const email = customerEmailInput.value;
     if (!email) return;
-    const { data: customer, error } = await window.supabase
-      .from('customers')
-      .select('name, phone')
-      .eq('email', email)
-      .maybeSingle();
-    if (customer && customer.name) {
-      document.getElementById('customerName').value = customer.name;
-      if (customer.phone) document.getElementById('customerPhone').value = customer.phone;
+    try {
+      const { data: customer, error } = await window.supabase
+        .from('customers')
+        .select('name, phone')
+        .eq('email', email)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.error('Error fetching customer:', error);
+        return;
+      }
+      
+      if (customer && customer.name) {
+        document.getElementById('customerName').value = customer.name;
+        if (customer.phone) document.getElementById('customerPhone').value = customer.phone;
+      }
+    } catch (error) {
+      console.error('Error in customer lookup:', error);
     }
   });
 }
@@ -1152,11 +1162,19 @@ if (confirmBtn) {
     if (window.lastCustomerCode) payload.customer_code = window.lastCustomerCode;
     window.lastBookingCustomerId = customer_id || '';
     // Insert booking into Supabase
-    const { data, error } = await window.supabase.from('bookings').insert([payload]);
+    const { data, error } = await window.supabase.from('bookings').insert([payload]).select();
     console.log('Supabase insert result:', { data, error });
     if (error) {
       console.error('Supabase insert error:', error);
       alert('There was an error submitting your booking. Please try again.\n' + (error.message || ''));
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm and Request Booking';
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('No booking data returned from insert');
+      alert('There was an error submitting your booking. Please try again.');
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Confirm and Request Booking';
       return;
@@ -1178,7 +1196,9 @@ if (confirmBtn) {
     }
 
     // Send email notifications
-    await sendBookingNotifications(payload, bookingIdFormatted);
+    console.log('📧 Starting email notifications...');
+    const emailResult = await sendBookingNotifications(payload, bookingIdFormatted);
+    console.log('📧 Email notification result:', emailResult);
 
     // Show success message
     alert('Your booking request has been submitted successfully! You will receive a confirmation email shortly.');

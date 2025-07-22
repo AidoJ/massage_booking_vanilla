@@ -6,11 +6,25 @@ let EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
 // Initialize EmailJS when the script loads
 (function() {
   // Wait for EmailJS to be available
-  if (typeof emailjs !== 'undefined') {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-    console.log('✅ EmailJS initialized successfully');
-  } else {
-    console.error('❌ EmailJS not loaded');
+  const initEmailJS = () => {
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+      console.log('✅ EmailJS initialized successfully');
+      return true;
+    } else {
+      console.log('⏳ EmailJS not ready yet, retrying...');
+      return false;
+    }
+  };
+
+  // Try to initialize immediately
+  if (!initEmailJS()) {
+    // If not ready, retry after a short delay
+    setTimeout(() => {
+      if (!initEmailJS()) {
+        console.error('❌ EmailJS failed to load after retry');
+      }
+    }, 1000);
   }
 })();
 
@@ -44,11 +58,22 @@ const EmailService = {
         throw new Error('EmailJS not loaded');
       }
       
+      // Check if EmailJS is initialized
+      if (!emailjs.isInitialized()) {
+        console.log('🔄 Re-initializing EmailJS...');
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+      }
+      
       const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
       console.log('✅ Client confirmation email sent successfully:', response);
       return { success: true };
     } catch (error) {
       console.error('❌ Error sending client confirmation email:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response
+      });
       return { success: false, error };
     }
   },
