@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rejuvenators Mobile Massage Booking</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBSFcQHl262KbU3H7-N6AdzEj-VO-wRASI&libraries=places"></script>
+</head>
+<body>
+  <div id="container">
+    <h1>Rejuvenators Mobile Massage Booking</h1>
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-step active" data-step="1"><span class="bubble">1</span><span class="progress-label">Address</span></div>
+        <div class="progress-step" data-step="2"><span class="bubble">2</span><span class="progress-label">Service</span></div>
+        <div class="progress-step" data-step="3"><span class="bubble">3</span><span class="progress-label">Gender</span></div>
+        <div class="progress-step" data-step="4"><span class="bubble">4</span><span class="progress-label">Date/Time</span></div>
+        <div class="progress-step" data-step="5"><span class="bubble">5</span><span class="progress-label">Therapist</span></div>
+        <div class="progress-step" data-step="6"><span class="bubble">6</span><span class="progress-label">Details</span></div>
+        <div class="progress-step" data-step="7"><span class="bubble">7</span><span class="progress-label">Room/Notes</span></div>
+        <div class="progress-step" data-step="8"><span class="bubble">8</span><span class="progress-label">Payment</span></div>
+        <div class="progress-step" data-step="9"><span class="bubble">9</span><span class="progress-label">Summary</span></div>
+      </div>
+    </div>
+    <!-- Step 1: Address -->
+    <div id="step1" class="step active">
+      <div class="step-header">
+        <h2>📍 Where would you like your massage?</h2>
+        <p class="step-description">Enter the address where you'd like us to come for your massage</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group horizontal">
+          <label style="font-weight:600; margin-bottom:8px; display:block;">Booking Type</label>
+          <div id="bookingTypeGroup" class="booking-type-wrapper">
+            <label class="custom-radio">Hotel/Accommodation
+              <input type="radio" name="bookingType" value="Hotel/Accommodation" checked>
+              <span class="checkmark"></span>
+            </label>
+            <label class="custom-radio">In-home
+              <input type="radio" name="bookingType" value="In-home">
+              <span class="checkmark"></span>
+            </label>
+            <label class="custom-radio">Corporate Event/Office
+              <input type="radio" name="bookingType" value="Corporate Event/Office">
+              <span class="checkmark"></span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group horizontal" id="businessNameGroup" style="display:none;">
+          <label for="businessName">Business Name</label>
+          <input type="text" id="businessName" placeholder="e.g., Google HQ" />
+        </div>
+        <input id="address" autocomplete="off" placeholder="Start typing your address..." />
+        <div id="address-autocomplete-status" style="color:#b00; font-size:0.95rem; margin-top:0.3rem;"></div>
+        <button class="btn next" data-next="step2">Continue</button>
+      </div>
+    </div>
+    <!-- Step 2: Therapy Selection -->
+    <div id="step2" class="step">
+      <div class="step-header">
+        <h2>💆‍♀️ Choose Your Service</h2>
+        <p class="step-description">Select the type of massage and how long you'd like it</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group horizontal">
+          <label for="service">Massage Type</label>
+          <select id="service">
+            <option value="">Select a service...</option>
+          </select>
+        </div>
+        <div class="form-group horizontal">
+          <label for="duration">Duration & Pricing</label>
+          <select id="duration">
+            <option value="">Select duration...</option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step1">Back</button>
+          <button class="btn next" data-next="step3">Continue</button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 3: Gender -->
+    <div id="step3" class="step">
+      <div class="step-header">
+        <h2>🧑‍🤝‍🧑 Preferences</h2>
+        <p class="step-description">Let us know your therapist gender preference and fallback option</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group">
+          <label style="font-weight:600; margin-bottom:8px; display:block;">Do you have a therapist gender preference?</label>
+          <div class="radio-group horizontal">
+            <label class="radio-inline">
+              <span>Female</span>
+              <input type="radio" name="genderPref" value="female">
+            </label>
+            <label class="radio-inline">
+              <span>Male</span>
+              <input type="radio" name="genderPref" value="male">
+            </label>
+            <label class="radio-inline">
+              <span>Don't mind, just want a great massage</span>
+              <input type="radio" name="genderPref" value="any" checked>
+            </label>
+          </div>
+          <div id="gender-availability-status" style="color:#b00; font-size:0.95rem; margin-top:0.3rem;"></div>
+        </div>
+        <div class="form-group" style="margin-top:18px;">
+          <label style="font-weight:600; margin-bottom:8px; display:block;">
+            If your selected therapist is not available, can we automatically look for a similar therapist for you?
+          </label>
+          <div class="radio-group">
+            <label class="radio-inline" style="font-weight:400;">
+              <input type="radio" name="fallbackOption" value="yes" checked> Yes
+            </label>
+            <label class="radio-inline" style="font-weight:400;">
+              <input type="radio" name="fallbackOption" value="no"> No – I will request a different time with the same therapist
+            </label>
+          </div>
+        </div>
+        <div class="button-group" style="margin-top:24px;">
+          <button class="btn prev" data-prev="step2">Back</button>
+          <button class="btn next" data-next="step4">Continue</button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 4: Date and Time -->
+    <div id="step4" class="step">
+      <div class="step-header">
+        <h2>🗓️ Date & Time</h2>
+        <p class="step-description">Choose when you'd like your massage</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group horizontal">
+          <label for="date">Date</label>
+          <input type="date" id="date" />
+        </div>
+        <div class="form-group horizontal">
+          <label for="time">Time</label>
+          <div id="timeSlotsContainer"></div>
+          <input type="hidden" id="time" />
+        </div>
+        <div class="form-group horizontal">
+          <label for="parking">Parking</label>
+          <select id="parking">
+            <option value="free">Free Parking Available</option>
+            <option value="paid">Paid Parking Required</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+        <div id="priceDisplay" class="price-display">
+          <strong>Estimated Price: $<span id="priceAmount">159.00</span></strong>
+          <div id="priceBreakdown" class="price-breakdown"></div>
+        </div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step3">Back</button>
+          <button class="btn next" data-next="step5">Continue</button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 5: Therapist Selection -->
+    <div id="step5" class="step">
+      <div class="step-header">
+        <h2>👤 Therapist Selection</h2>
+        <p class="step-description">Select your preferred therapist from our available team</p>
+      </div>
+      <div class="step-content">
+        <div id="therapistSelection"></div>
+        <button class="btn prev" data-prev="step4">Back</button>
+        <button class="btn next" data-next="step6">Continue</button>
+      </div>
+    </div>
+    <!-- Step 6: Customer Details -->
+    <div id="step6" class="step">
+      <div class="step-header">
+        <h2>👤 Your Details</h2>
+        <p class="step-description">Please enter your contact details</p>
+      </div>
+      <div class="step-content">
+        <!-- Registration option -->
+        <div class="form-group horizontal">
+          <label style="font-weight:600; margin-bottom:8px; display:block;">Would you like to register with us or remain as a guest?</label>
+          <div id="registerOptionGroup" class="radio-group horizontal">
+            <label class="radio-inline"><input type="radio" name="registerOption" value="yes"> Yes</label>
+            <label class="radio-inline"><input type="radio" name="registerOption" value="no" checked> No</label>
+          </div>
+          <div style="font-size:0.97rem; color:#007e8c; margin-top:4px; margin-bottom:8px;">
+            If you register with us it will make it quicker and easier to book next time and we can keep you updated about our special offers.
+          </div>
+        </div>
+        <!-- Existing customer details fields -->
+        <input type="text" id="customerName" placeholder="Full Name" />
+        <input type="email" id="customerEmail" placeholder="Email Address" />
+        <input type="tel" id="customerPhone" placeholder="Phone Number" />
+        <div class="button-group">
+          <button class="btn prev" data-prev="step5">Back</button>
+          <button class="btn next" data-next="step7">Continue</button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 7: Room and Notes -->
+    <div id="step7" class="step">
+      <div class="step-header">
+        <h2>🏠 Room Details & Notes</h2>
+        <p class="step-description">Tell us about the room and any additional information for your therapist</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group horizontal">
+          <label for="roomNumber">Room Number (If not applicable or available write N/A)</label>
+          <input type="text" id="roomNumber" placeholder="e.g., Room 101, Apartment 2B" />
+        </div>
+        <div class="form-group horizontal">
+          <label for="bookerName">Name of person who booked the room (If not applicable, e.g. in-home booking write N/A)</label>
+          <input type="text" id="bookerName" placeholder="Full name of the person who made this booking" />
+        </div>
+        <div class="form-group horizontal">
+          <label for="notes">Notes (Optional)</label>
+          <textarea id="notes" rows="4" placeholder="e.g., Parking instructions, access codes, special requirements, medical conditions, preferred pressure, etc."></textarea>
+        </div>
+        <button class="btn prev" data-prev="step6">Back</button>
+        <button class="btn next" data-next="step8">Continue</button>
+      </div>
+    </div>
+    <!-- Step 8: Payment Card Entry -->
+    <div id="step8" class="step">
+      <div class="step-header">
+        <h2>💳 Enter Card Details</h2>
+        <p class="step-description">Please enter your card details below <br/>(Your card will only be charged after a therapist accepts your booking.)</p>
+      </div>
+      <div class="step-content" autocomplete="off" name="no-autofill-payment">
+        <div style="margin-bottom: 18px;">
+          <div id="card-element" class="card-element"></div>
+        </div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step7">Back</button>
+          <button class="btn next primary" data-next="step9">Proceed to Booking Request</button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 9: Booking Summary -->
+    <div id="step9" class="step">
+      <div class="step-header">
+        <h2>📝 Booking Summary</h2>
+        <p class="step-description">Review your booking details before confirming</p>
+      </div>
+      <div class="step-content">
+        <div id="bookingSummaryDetails" class="booking-summary"></div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step8">Back</button>
+          <button class="btn next primary" data-next="step10">Confirm and Request Booking</button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 10: Confirm Booking Request -->
+    <div id="step10" class="step">
+      <div class="step-header">
+        <h2>✅ Booking Request Submitted</h2>
+        <p class="step-description">Thank you! Your booking request has been submitted.</p>
+      </div>
+      <div class="step-content">
+        <div id="confirmationDetails" class="booking-summary"></div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step9">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/emailService.js"></script>
+  <script src="js/booking.js"></script>
+</body>
+</html> 

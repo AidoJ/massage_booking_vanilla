@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Response | Rejuvenators Mobile Massage</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f7fafd;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 2.5rem 2rem 2rem 2rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #007e8c;
+    }
+    h2 {
+      margin: 0 0 0.5rem 0;
+      color: #007e8c;
+      font-size: 1.5rem;
+    }
+    p {
+      margin: 0.5rem 0 0 0;
+      font-size: 1.08rem;
+    }
+    .success {
+      color: #007e8c;
+    }
+    .error {
+      color: #b00;
+    }
+    @media (max-width: 500px) {
+      .container {
+        padding: 1.2rem 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="responseBox">
+    <div class="icon" id="icon">💬</div>
+    <h2 id="responseTitle">Processing...</h2>
+    <p id="responseMsg">Please wait while we process your response.</p>
+  </div>
+  <script>
+    // Parse URL params
+    function getParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+    const action = getParam('action');
+    const status = getParam('status');
+    const therapist = getParam('therapist');
+    const client = getParam('client');
+    const box = document.getElementById('responseBox');
+    const icon = document.getElementById('icon');
+    const title = document.getElementById('responseTitle');
+    const msg = document.getElementById('responseMsg');
+    if (status === 'success') {
+      icon.textContent = action === 'accept' ? '✅' : '❌';
+      title.textContent = action === 'accept' ? 'Booking Accepted' : 'Booking Declined';
+      msg.textContent = action === 'accept'
+        ? 'Thank you! You have accepted this booking. The client will be notified.'
+        : 'You have declined this booking. We will notify the client and look for an alternate therapist.';
+    } else if (status === 'already') {
+      icon.textContent = 'ℹ️';
+      title.textContent = 'Already Responded';
+      msg.textContent = 'This booking has already been accepted or declined.';
+    } else if (status === 'timeout') {
+      icon.textContent = '⏰';
+      title.textContent = 'Response Timeout';
+      msg.textContent = 'Sorry, the response window for this booking has expired.';
+    } else if (status === 'error') {
+      icon.textContent = '⚠️';
+      title.textContent = 'Error';
+      msg.textContent = 'There was a problem processing your response. Please contact support.';
+    } else {
+      icon.textContent = '💬';
+      title.textContent = 'Processing...';
+      msg.textContent = 'Please wait while we process your response.';
+    }
+  </script>
+</body>
+</html> 
