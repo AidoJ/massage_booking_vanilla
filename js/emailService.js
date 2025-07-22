@@ -58,11 +58,9 @@ const EmailService = {
         throw new Error('EmailJS not loaded');
       }
       
-      // Check if EmailJS is initialized
-      if (!emailjs.isInitialized()) {
-        console.log('🔄 Re-initializing EmailJS...');
-        emailjs.init(EMAILJS_PUBLIC_KEY);
-      }
+      // Re-initialize EmailJS to ensure it's ready
+      console.log('🔄 Initializing EmailJS...');
+      emailjs.init(EMAILJS_PUBLIC_KEY);
       
       const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
       console.log('✅ Client confirmation email sent successfully:', response);

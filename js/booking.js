@@ -938,10 +938,11 @@ function populateBookingSummary() {
   // Get customer_id and booking_id if available
   const customer_id = window.lastBookingCustomerId || '';
   const booking_id = window.lastBookingId || '';
+  const customer_code = window.lastCustomerCode || '';
   summaryDiv.innerHTML = `
     <h3>Booking Details</h3>
     ${booking_id ? `<p><strong>Booking ID:</strong> ${booking_id}</p>` : ''}
-    ${customer_id ? `<p><strong>Customer ID:</strong> ${customer_id}</p>` : ''}
+    ${customer_code ? `<p><strong>Customer Code:</strong> ${customer_code}</p>` : ''}
     ${businessName && businessName !== 'N/A' ? `<p><strong>Business Name:</strong> ${businessName}</p>` : ''}
     <p><strong>Address:</strong> ${address}</p>
     <p><strong>Service:</strong> ${service}</p>
@@ -1067,18 +1068,19 @@ if (customerEmailInput) {
     const email = customerEmailInput.value;
     if (!email) return;
     try {
-      const { data: customer, error } = await window.supabase
+      const { data: customers, error } = await window.supabase
         .from('customers')
         .select('name, phone')
         .eq('email', email)
-        .single();
+        .limit(1);
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+      if (error) {
         console.error('Error fetching customer:', error);
         return;
       }
       
-      if (customer && customer.name) {
+      if (customers && customers.length > 0) {
+        const customer = customers[0];
         document.getElementById('customerName').value = customer.name;
         if (customer.phone) document.getElementById('customerPhone').value = customer.phone;
       }
@@ -1185,14 +1187,19 @@ if (confirmBtn) {
     const bookingIdFormatted = generateBookingId(bookingId);
     window.lastBookingId = bookingIdFormatted;
     
-    // Update booking with the formatted ID
+    // Update booking with the formatted booking_id and customer_code
     const { error: updateError } = await window.supabase
       .from('bookings')
-      .update({ booking_id: bookingIdFormatted })
+      .update({ 
+        booking_id: bookingIdFormatted,
+        customer_code: window.lastCustomerCode || null
+      })
       .eq('id', bookingId);
     
     if (updateError) {
-      console.error('Error updating booking ID:', updateError);
+      console.error('Error updating booking with IDs:', updateError);
+    } else {
+      console.log('✅ Updated booking with booking_id:', bookingIdFormatted, 'and customer_code:', window.lastCustomerCode);
     }
 
     // Send email notifications
@@ -1323,30 +1330,11 @@ function generateBookingId(uuid) {
   return `RMM${year}${month}${seq}`;
 }
 
-// Add this function after the existing functions
+// Simplified email function - just send client confirmation for now
 async function sendBookingNotifications(bookingData, bookingId) {
   try {
-    // Get settings for timeout
-    const { data: settings } = await window.supabase.from('settings').select('*').single();
-    const responseTimeout = settings?.therapist_response_timeout_minutes || 2;
-
-    // Prepare email data
-    const emailData = {
-      booking_id: bookingId,
-      customer_name: bookingData.customer_name,
-      customer_email: bookingData.customer_email,
-      customer_phone: bookingData.customer_phone,
-      service_name: '', // Will be populated from service lookup
-      duration_minutes: bookingData.duration_minutes,
-      booking_time: bookingData.booking_time,
-      address: bookingData.address,
-      room_number: bookingData.room_number,
-      booker_name: bookingData.booker_name,
-      price: bookingData.price,
-      therapist_fee: bookingData.therapist_fee,
-      response_timeout: responseTimeout
-    };
-
+    console.log('📧 Starting simple email notification...');
+    
     // Get service name
     const { data: service } = await window.supabase
       .from('services')
@@ -1354,31 +1342,27 @@ async function sendBookingNotifications(bookingData, bookingId) {
       .eq('id', bookingData.service_id)
       .single();
     
-    if (service) {
-      emailData.service_name = service.name;
-    }
+    // Prepare simple email data
+    const emailData = {
+      booking_id: bookingId, // This is the formatted booking ID
+      customer_code: window.lastCustomerCode || 'N/A',
+      customer_name: bookingData.customer_name,
+      customer_email: bookingData.customer_email,
+      service_name: service?.name || 'Massage Service',
+      duration_minutes: bookingData.duration_minutes,
+      booking_time: bookingData.booking_time,
+      address: bookingData.address,
+      price: bookingData.price
+    };
 
-    // Get available therapists for this service
-    const { data: therapists } = await window.supabase
-      .from('therapist_profiles')
-      .select(`
-        *,
-        therapist_services!inner(service_id)
-      `)
-      .eq('therapist_services.service_id', bookingData.service_id)
-      .eq('is_active', true);
-
-    if (therapists && therapists.length > 0) {
-      // Send notification to all available therapists
-      const therapistResults = await window.EmailService.sendTherapistNotification(emailData, therapists);
-      console.log('Therapist notification results:', therapistResults);
-    }
-
-    // Send confirmation email to client
+    // Send confirmation email to client only
     const clientResult = await window.EmailService.sendClientConfirmation(emailData);
     console.log('Client confirmation result:', clientResult);
+    
+    return clientResult;
 
   } catch (error) {
     console.error('Error sending booking notifications:', error);
+    return { success: false, error };
   }
 } 
