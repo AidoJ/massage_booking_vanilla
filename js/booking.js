@@ -1090,12 +1090,12 @@ function populateBookingSummary() {
   const time = document.getElementById('time').value;
   const parking = document.getElementById('parking').value;
   const therapist = document.querySelector('input[name="therapistId"]:checked')?.dataset?.name || '';
-  const customerName = document.getElementById('customerName').value;
-  const customerEmail = document.getElementById('customerEmail').value;
-  const customerPhone = document.getElementById('customerPhone').value;
-  const roomNumber = document.getElementById('roomNumber').value;
-  const bookerName = document.getElementById('bookerName').value;
-  const notes = document.getElementById('notes').value;
+  const customerName = (document.getElementById('customerFirstName')?.value || '') + ' ' + (document.getElementById('customerLastName')?.value || '');
+  const customerEmail = document.getElementById('customerEmail')?.value || '';
+  const customerPhone = document.getElementById('customerPhone')?.value || '';
+  const roomNumber = document.getElementById('roomNumber')?.value || '';
+  const bookerName = document.getElementById('bookerName')?.value || '';
+  const notes = document.getElementById('notes')?.value || '';
   const price = document.getElementById('priceAmount').textContent;
   const therapist_fee = calculateTherapistFee(date, time, duration);
   // Get customer_id and booking_id if available
@@ -1428,11 +1428,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get customer details
         const customerFirstName = document.getElementById('customerFirstName')?.value || '';
         const customerLastName = document.getElementById('customerLastName')?.value || '';
-        const customerEmail = document.getElementById('customerEmail').value;
-        const customerPhone = document.getElementById('customerPhone').value;
-        const roomNumber = document.getElementById('roomNumber').value;
-        const bookerName = document.getElementById('bookerName').value;
-        const notes = document.getElementById('notes').value;
+        const customerEmail = document.getElementById('customerEmail')?.value || '';
+        const customerPhone = document.getElementById('customerPhone')?.value || '';
+        const roomNumber = document.getElementById('roomNumber')?.value || '';
+        const bookerName = document.getElementById('bookerName')?.value || '';
+        const notes = document.getElementById('notes')?.value || '';
         const price = document.getElementById('priceAmount').textContent ? parseFloat(document.getElementById('priceAmount').textContent) : null;
         
         // Calculate therapist fee
