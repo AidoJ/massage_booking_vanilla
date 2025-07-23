@@ -1,0 +1,14 @@
+{
+  "name": "massage-booking-vanilla",
+  "version": "1.0.0",
+  "description": "Vanilla HTML/JS massage booking platform",
+  "main": "index.html",
+  "scripts": {
+    "build": "node build-script.js"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": "18.x"
+  }
+} 
