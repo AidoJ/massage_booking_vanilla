@@ -41,7 +41,7 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 | `SUPABASE_URL` | `https://dcukfurezlkagvvwgsgr.supabase.co` |
 | `SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
 | `EMAILJS_SERVICE_ID` | `service_puww2kb` |
-| `EMAILJS_TEMPLATE_ID` | `template_zh8jess` |
+| `EMAILJS_TEMPLATE_ID` | `template_1qnwhwc` |
 | `EMAILJS_PUBLIC_KEY` | `V8qq2pjH8vfh3a6q3` |
 | `GOOGLE_MAPS_API_KEY` | Your Google Maps API key |
 | `URL` | Your Netlify site URL (e.g., `https://your-site.netlify.app`) |
@@ -62,5 +62,5 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 Your current setup uses these values:
 - **Supabase URL:** `https://dcukfurezlkagvvwgsgr.supabase.co`
 - **EmailJS Service:** `service_puww2kb`
-- **EmailJS Template:** `template_zh8jess`
+- **EmailJS Template:** `template_1qnwhwc`
 - **EmailJS Public Key:** `V8qq2pjH8vfh3a6q3` 

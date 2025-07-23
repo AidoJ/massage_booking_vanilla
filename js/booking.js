@@ -24,6 +24,28 @@ function calculateTherapistFee(dateVal, timeVal, durationVal) {
   return Math.round(rate * durationMultiplier * 100) / 100;
 }
 
+// Global showStep function - accessible from anywhere
+function showStep(stepId) {
+  const steps = Array.from(document.querySelectorAll('.step'));
+  const progressSteps = Array.from(document.querySelectorAll('.progress-step'));
+  
+  steps.forEach(step => {
+    step.classList.remove('active');
+  });
+  const current = document.getElementById(stepId);
+  if (current) current.classList.add('active');
+
+  // Update progress bar
+  const idx = steps.findIndex(s => s.id === stepId);
+  progressSteps.forEach((ps, i) => {
+    if (i === idx) {
+      ps.classList.add('active');
+    } else {
+      ps.classList.remove('active');
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const steps = Array.from(document.querySelectorAll('.step'));
   const progressSteps = Array.from(document.querySelectorAll('.progress-step'));
@@ -34,24 +56,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-11
   const dd = String(today.getDate()).padStart(2, '0');
   document.getElementById('date').setAttribute('min', `${yyyy}-${mm}-${dd}`);
-
-  function showStep(stepId) {
-    steps.forEach(step => {
-      step.classList.remove('active');
-    });
-    const current = document.getElementById(stepId);
-    if (current) current.classList.add('active');
-
-    // Update progress bar
-    const idx = steps.findIndex(s => s.id === stepId);
-    progressSteps.forEach((ps, i) => {
-      if (i === idx) {
-        ps.classList.add('active');
-      } else {
-        ps.classList.remove('active');
-      }
-    });
-  }
 
   // Initial state: show only the first step
   showStep('step1');
@@ -72,13 +76,59 @@ document.addEventListener('DOMContentLoaded', function () {
   `;
   document.body.appendChild(loadingDiv);
   
+  // Add timeout and retry logic for network issues
+  const loadDataWithRetry = async (loadFunction, maxRetries = 3) => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await loadFunction();
+      } catch (error) {
+        console.warn(`Attempt ${attempt} failed:`, error.message);
+        if (attempt === maxRetries) {
+          console.error(`Failed after ${maxRetries} attempts:`, error);
+          return null;
+        }
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  };
+  
   Promise.all([
-    populateTherapyOptions(),
-    fetchPricingData(),
-    fetchSettings()
-  ]).then(() => {
+    loadDataWithRetry(populateTherapyOptions),
+    loadDataWithRetry(fetchPricingData),
+    loadDataWithRetry(fetchSettings)
+  ]).then((results) => {
     console.log('✅ All data loaded successfully');
+    
+    // Check if any data failed to load
+    const failedLoads = results.filter(result => result === null).length;
+    if (failedLoads > 0) {
+      console.warn(`⚠️ ${failedLoads} data sources failed to load. Application will continue with available data.`);
+      
+      // Show a user-friendly message
+      const warningDiv = document.createElement('div');
+      warningDiv.style.cssText = `
+        position: fixed; top: 10px; right: 10px; 
+        background: #fff3cd; border: 1px solid #ffeaa7; 
+        padding: 10px; border-radius: 5px; z-index: 10000;
+        max-width: 300px; font-size: 14px;
+      `;
+      warningDiv.innerHTML = `
+        <strong>⚠️ Connection Warning</strong><br>
+        Some data couldn't be loaded. Please check your internet connection and refresh the page.
+      `;
+      document.body.appendChild(warningDiv);
+      
+      // Remove warning after 10 seconds
+      setTimeout(() => {
+        if (warningDiv.parentNode) {
+          warningDiv.parentNode.removeChild(warningDiv);
+        }
+      }, 10000);
+    }
+    
     setupPriceListeners();
+    
     // Remove loading indicator
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) {
@@ -86,7 +136,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }).catch(error => {
     console.error('❌ Error loading initial data:', error);
-    // Remove loading indicator even on error
+    
+    // Show error message to user
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #f8d7da; border: 1px solid #f5c6cb; 
+      padding: 20px; border-radius: 5px; z-index: 10000;
+      max-width: 400px; text-align: center;
+    `;
+    errorDiv.innerHTML = `
+      <h3>⚠️ Connection Error</h3>
+      <p>Unable to connect to the booking system. This might be due to:</p>
+      <ul style="text-align: left; margin: 10px 0;">
+        <li>Internet connection issues</li>
+        <li>Temporary server maintenance</li>
+        <li>Network restrictions</li>
+      </ul>
+      <button onclick="location.reload()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+        Try Again
+      </button>
+    `;
+    document.body.appendChild(errorDiv);
+    
+    // Remove loading indicator
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) {
       loadingIndicator.remove();
@@ -181,23 +254,29 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         break;
       case 'step6': // Customer Details
-        const name = document.getElementById('customerName');
+        const firstName = document.getElementById('customerFirstName');
+        const lastName = document.getElementById('customerLastName');
         const email = document.getElementById('customerEmail');
         const phone = document.getElementById('customerPhone');
-        if (!name.value) {
+        
+        if (!firstName?.value) {
           isValid = false;
-          showError(name, 'Please enter your full name.');
+          showError(firstName || document.getElementById('customerFirstName'), 'Please enter your first name.');
         }
-        if (!email.value) {
+        if (!lastName?.value) {
           isValid = false;
-          showError(email, 'Please enter your email address.');
+          showError(lastName || document.getElementById('customerLastName'), 'Please enter your last name.');
+        }
+        if (!email?.value) {
+          isValid = false;
+          showError(email || document.getElementById('customerEmail'), 'Please enter your email address.');
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
           isValid = false;
           showError(email, 'Please enter a valid email address.');
         }
-        if (!phone.value) {
+        if (!phone?.value) {
           isValid = false;
-          showError(phone, 'Please enter your phone number.');
+          showError(phone || document.getElementById('customerPhone'), 'Please enter your phone number.');
         }
         break;
     }
@@ -219,42 +298,98 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Fetch and populate services and durations from Supabase
   async function populateTherapyOptions() {
-    // Fetch services
-    const { data: services, error: serviceError } = await window.supabase
-      .from('services')
-      .select('id, name, is_active')
-      .eq('is_active', true)
-      .order('sort_order');
-    console.log('Supabase services:', services, 'Error:', serviceError);
-    const serviceSelect = document.getElementById('service');
-    if (serviceSelect) {
-      serviceSelect.innerHTML = '<option value="">Select a service...</option>';
-      if (services) {
-        services.forEach(service => {
-          const opt = document.createElement('option');
-          opt.value = service.id;
-          opt.textContent = service.name;
-          serviceSelect.appendChild(opt);
-        });
+    try {
+      // Fetch services
+      const { data: services, error: serviceError } = await window.supabase
+        .from('services')
+        .select('id, name, is_active')
+        .eq('is_active', true)
+        .order('sort_order');
+      console.log('Supabase services:', services, 'Error:', serviceError);
+      
+      const serviceSelect = document.getElementById('service');
+      if (serviceSelect) {
+        serviceSelect.innerHTML = '<option value="">Select a service...</option>';
+        if (services && services.length > 0) {
+          services.forEach(service => {
+            const opt = document.createElement('option');
+            opt.value = service.id;
+            opt.textContent = service.name;
+            serviceSelect.appendChild(opt);
+          });
+        } else {
+          // Add fallback options if no data loaded
+          const fallbackServices = [
+            { id: '1', name: 'Relaxation Massage' },
+            { id: '2', name: 'Deep Tissue Massage' },
+            { id: '3', name: 'Sports Massage' }
+          ];
+          fallbackServices.forEach(service => {
+            const opt = document.createElement('option');
+            opt.value = service.id;
+            opt.textContent = service.name;
+            serviceSelect.appendChild(opt);
+          });
+          console.warn('⚠️ Using fallback services due to connection issues');
+        }
       }
-    }
-    // Fetch durations
-    const { data: durations, error: durationError } = await window.supabase
-      .from('duration_pricing')
-      .select('id, duration_minutes, uplift_percentage, is_active')
-      .eq('is_active', true)
-      .order('sort_order');
-    console.log('Supabase durations:', durations, 'Error:', durationError);
-    const durationSelect = document.getElementById('duration');
-    if (durationSelect) {
-      durationSelect.innerHTML = '<option value="">Select duration...</option>';
-      if (durations) {
-        durations.forEach(duration => {
-          const opt = document.createElement('option');
-          opt.value = duration.duration_minutes;
-          opt.textContent = duration.duration_minutes; // Only show the raw value
-          durationSelect.appendChild(opt);
-        });
+      
+      // Fetch durations
+      const { data: durations, error: durationError } = await window.supabase
+        .from('duration_pricing')
+        .select('id, duration_minutes, uplift_percentage, is_active')
+        .eq('is_active', true)
+        .order('sort_order');
+      console.log('Supabase durations:', durations, 'Error:', durationError);
+      
+      const durationSelect = document.getElementById('duration');
+      if (durationSelect) {
+        durationSelect.innerHTML = '<option value="">Select duration...</option>';
+        if (durations && durations.length > 0) {
+          durations.forEach(duration => {
+            const opt = document.createElement('option');
+            opt.value = duration.id;
+            opt.textContent = `${duration.duration_minutes} minutes`;
+            durationSelect.appendChild(opt);
+          });
+        } else {
+          // Add fallback options if no data loaded
+          const fallbackDurations = [
+            { id: '1', duration_minutes: 30 },
+            { id: '2', duration_minutes: 60 },
+            { id: '3', duration_minutes: 90 }
+          ];
+          fallbackDurations.forEach(duration => {
+            const opt = document.createElement('option');
+            opt.value = duration.id;
+            opt.textContent = `${duration.duration_minutes} minutes`;
+            durationSelect.appendChild(opt);
+          });
+          console.warn('⚠️ Using fallback durations due to connection issues');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error populating therapy options:', error);
+      // Add basic fallback options
+      const serviceSelect = document.getElementById('service');
+      const durationSelect = document.getElementById('duration');
+      
+      if (serviceSelect) {
+        serviceSelect.innerHTML = `
+          <option value="">Select a service...</option>
+          <option value="1">Relaxation Massage</option>
+          <option value="2">Deep Tissue Massage</option>
+          <option value="3">Sports Massage</option>
+        `;
+      }
+      
+      if (durationSelect) {
+        durationSelect.innerHTML = `
+          <option value="">Select duration...</option>
+          <option value="1">30 minutes</option>
+          <option value="2">60 minutes</option>
+          <option value="3">90 minutes</option>
+        `;
       }
     }
   }
@@ -279,45 +414,73 @@ console.log('Globals:', {
 });
 
   async function fetchPricingData() {
-    // Fetch services
-    const { data: services } = await window.supabase
-      .from('services')
-      .select('id, name, service_base_price, is_active')
-      .eq('is_active', true)
-      .order('sort_order');
-    servicesCache = services || [];
+    try {
+      // Fetch services
+      const { data: services } = await window.supabase
+        .from('services')
+        .select('id, name, service_base_price, is_active')
+        .eq('is_active', true)
+        .order('sort_order');
+      servicesCache = services || [];
 
-    // Fetch durations
-    const { data: durations } = await window.supabase
-      .from('duration_pricing')
-      .select('id, duration_minutes, uplift_percentage, is_active')
-      .eq('is_active', true)
-      .order('sort_order');
-    durationsCache = durations || [];
+      // Fetch durations
+      const { data: durations } = await window.supabase
+        .from('duration_pricing')
+        .select('id, duration_minutes, uplift_percentage, is_active')
+        .eq('is_active', true)
+        .order('sort_order');
+      durationsCache = durations || [];
 
-    // Fetch time pricing rules
-    const { data: timeRules } = await window.supabase
-      .from('time_pricing_rules')
-      .select('id, day_of_week, start_time, end_time, uplift_percentage, is_active, label')
-      .eq('is_active', true)
-      .order('sort_order');
-    timePricingRulesCache = timeRules || [];
+      // Fetch time pricing rules
+      const { data: timeRules } = await window.supabase
+        .from('time_pricing_rules')
+        .select('id, day_of_week, start_time, end_time, uplift_percentage, is_active, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      timePricingRulesCache = timeRules || [];
+    } catch (error) {
+      console.error('❌ Error fetching pricing data:', error);
+      // Use fallback data
+      servicesCache = [
+        { id: '1', name: 'Relaxation Massage', service_base_price: 80 },
+        { id: '2', name: 'Deep Tissue Massage', service_base_price: 90 },
+        { id: '3', name: 'Sports Massage', service_base_price: 100 }
+      ];
+      durationsCache = [
+        { id: '1', duration_minutes: 30, uplift_percentage: 0 },
+        { id: '2', duration_minutes: 60, uplift_percentage: 0 },
+        { id: '3', duration_minutes: 90, uplift_percentage: 25 }
+      ];
+      timePricingRulesCache = [];
+    }
   }
 
   async function fetchSettings() {
-    const { data: settings } = await window.supabase
-      .from('system_settings')
-      .select('key, value');
-    if (settings) {
-      for (const s of settings) {
-        if (s.key === 'business_opening_time') window.businessOpeningHour = Number(s.value);
-        if (s.key === 'business_closing_time') window.businessClosingHour = Number(s.value);
-        if (s.key === 'before_service_buffer_time') window.beforeServiceBuffer = Number(s.value);
-        if (s.key === 'after_service_buffer_time') window.afterServiceBuffer = Number(s.value);
-        if (s.key === 'min_booking_advance_hours') window.minBookingAdvanceHours = Number(s.value);
-        if (s.key === 'therapist_daytime_hourly_rate') window.therapistDaytimeRate = Number(s.value);
-        if (s.key === 'therapist_afterhours_hourly_rate') window.therapistAfterhoursRate = Number(s.value);
+    try {
+      const { data: settings } = await window.supabase
+        .from('system_settings')
+        .select('key, value');
+      if (settings) {
+        for (const s of settings) {
+          if (s.key === 'business_opening_time') window.businessOpeningHour = Number(s.value);
+          if (s.key === 'business_closing_time') window.businessClosingHour = Number(s.value);
+          if (s.key === 'before_service_buffer_time') window.beforeServiceBuffer = Number(s.value);
+          if (s.key === 'after_service_buffer_time') window.afterServiceBuffer = Number(s.value);
+          if (s.key === 'min_booking_advance_hours') window.minBookingAdvanceHours = Number(s.value);
+          if (s.key === 'therapist_daytime_hourly_rate') window.therapistDaytimeRate = Number(s.value);
+          if (s.key === 'therapist_afterhours_hourly_rate') window.therapistAfterhoursRate = Number(s.value);
+        }
       }
+    } catch (error) {
+      console.error('❌ Error fetching settings:', error);
+      // Use fallback settings
+      window.businessOpeningHour = 9;
+      window.businessClosingHour = 17;
+      window.beforeServiceBuffer = 15;
+      window.afterServiceBuffer = 15;
+      window.minBookingAdvanceHours = 2;
+      window.therapistDaytimeRate = 45;
+      window.therapistAfterhoursRate = 55;
     }
   }
 
@@ -1003,37 +1166,73 @@ async function generateCustomerCode(surname) {
 }
 
 // Add customer registration logic
-async function getOrCreateCustomerId(name, email, phone) {
+async function getOrCreateCustomerId(firstName, lastName, email, phone, isGuest = false) {
   if (!email) return null;
-  // Check if customer exists
+  
+  // Check if customer exists by email
   const { data: existing, error: fetchError } = await window.supabase
     .from('customers')
-    .select('id, customer_code')
+    .select('id, customer_code, first_name, last_name, is_guest')
     .eq('email', email)
     .maybeSingle();
+    
   if (fetchError) {
     console.error('Error fetching customer:', fetchError);
     return null;
   }
+  
   if (existing && existing.id) {
+    // Customer exists - return existing ID
     window.lastCustomerCode = existing.customer_code || '';
+    console.log('✅ Existing customer found:', existing);
     return existing.id;
   }
-  // Generate customer_code
-  const surname = name.trim().split(' ').slice(-1)[0];
-  const customer_code = await generateCustomerCode(surname);
-  // Insert new customer
+  
+  // Customer doesn't exist - create new customer
+  let customer_code;
+  
+  if (isGuest) {
+    // Generate guest code using the database function
+    const { data: guestCodeResult, error: guestCodeError } = await window.supabase
+      .rpc('generate_guest_code');
+      
+    if (guestCodeError) {
+      console.error('Error generating guest code:', guestCodeError);
+      // Fallback to manual guest code generation
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      customer_code = `GUEST_${date}_${random}`;
+    } else {
+      customer_code = guestCodeResult;
+    }
+  } else {
+    // Generate regular customer code based on surname
+    const surname = lastName || firstName || 'CUST';
+    customer_code = await generateCustomerCode(surname);
+  }
+  
+  // Insert new customer with correct column names
   const { data: inserted, error: insertError } = await window.supabase
     .from('customers')
-    .insert([{ name, email, phone, customer_code }])
+    .insert([{ 
+      first_name: firstName, 
+      last_name: lastName, 
+      email, 
+      phone, 
+      customer_code,
+      is_guest: isGuest
+    }])
     .select('id, customer_code')
     .maybeSingle();
+    
   if (insertError) {
     console.error('Error inserting customer:', insertError);
     alert('There was an error registering your customer details. Please try again.');
     return null;
   }
+  
   window.lastCustomerCode = inserted?.customer_code || '';
+  console.log('✅ New customer created:', inserted);
   return inserted?.id || null;
 }
 
@@ -1061,308 +1260,302 @@ if (customerDetailsStep) {
   observerCust.observe(customerDetailsStep, { attributes: true, attributeFilter: ['class'] });
 }
 
-// Auto-fill customer details if returning
+// Email-first customer lookup logic
 const customerEmailInput = document.getElementById('customerEmail');
+const customerLookupResult = document.getElementById('customerLookupResult');
+const customerInfo = document.getElementById('customerInfo');
+const registrationOption = document.getElementById('registrationOption');
+const customerFirstNameInput = document.getElementById('customerFirstName');
+const customerLastNameInput = document.getElementById('customerLastName');
+const customerPhoneInput = document.getElementById('customerPhone');
+const emailStatus = document.getElementById('emailStatus');
+
 if (customerEmailInput) {
   customerEmailInput.addEventListener('blur', async function () {
-    const email = customerEmailInput.value;
-    if (!email) return;
+    const email = customerEmailInput.value.trim();
+    if (!email) {
+      hideCustomerLookup();
+      return;
+    }
+    
+    // Show loading status
+    emailStatus.innerHTML = '<span style="color:#007e8c;">⏳ Checking email...</span>';
+    
     try {
-      const { data: customers, error } = await window.supabase
+      const { data: customer, error } = await window.supabase
         .from('customers')
-        .select('name, phone')
+        .select('id, first_name, last_name, phone, customer_code, is_guest')
         .eq('email', email)
-        .limit(1);
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching customer:', error);
+        emailStatus.innerHTML = '<span style="color:#d32f2f;">❌ Error checking email</span>';
         return;
       }
       
-      if (customers && customers.length > 0) {
-        const customer = customers[0];
-        document.getElementById('customerName').value = customer.name;
-        if (customer.phone) document.getElementById('customerPhone').value = customer.phone;
+      if (customer) {
+        // Existing customer found
+        showExistingCustomer(customer);
+      } else {
+        // New customer
+        showNewCustomer();
       }
     } catch (error) {
       console.error('Error in customer lookup:', error);
+      emailStatus.innerHTML = '<span style="color:#d32f2f;">❌ Error checking email</span>';
     }
   });
 }
 
-// Update booking submission logic to include customer_code in bookings
-const confirmBtn = document.querySelector('#step9 .btn.next.primary');
-if (confirmBtn) {
-  confirmBtn.addEventListener('click', async function (e) {
-    e.preventDefault();
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Submitting...';
-    // Gather all booking details
-    const addressInput = document.getElementById('address');
-    const bookingType = document.querySelector('input[name="bookingType"]:checked')?.value || null;
-    let businessName = '';
-    if (bookingType === 'Corporate Event/Office') {
-      businessName = document.getElementById('businessName').value;
-    } else if (bookingType === 'Hotel/Accommodation') {
-      businessName = addressInput.dataset.businessName || '';
-    } else {
-      businessName = 'N/A';
-    }
-    const lat = addressInput.dataset.lat ? parseFloat(addressInput.dataset.lat) : null;
-    const lng = addressInput.dataset.lng ? parseFloat(addressInput.dataset.lng) : null;
-    const serviceId = document.getElementById('service').value;
-    const duration = document.getElementById('duration').value ? parseInt(document.getElementById('duration').value, 10) : null;
-    const genderPref = document.querySelector('input[name="genderPref"]:checked')?.value || '';
-    const fallbackOption = document.querySelector('input[name="fallbackOption"]:checked')?.value || '';
-    const date = document.getElementById('date').value;
-    const time = document.getElementById('time').value;
-    const parking = document.getElementById('parking').value;
-    const therapistId = document.querySelector('input[name="therapistId"]:checked')?.value || null;
-    const customerName = document.getElementById('customerName').value;
-    const customerEmail = document.getElementById('customerEmail').value;
-    const customerPhone = document.getElementById('customerPhone').value;
-    const roomNumber = document.getElementById('roomNumber').value;
-    const bookerName = document.getElementById('bookerName').value;
-    const notes = document.getElementById('notes').value;
-    const price = document.getElementById('priceAmount').textContent ? parseFloat(document.getElementById('priceAmount').textContent) : null;
-    // Calculate therapist fee
-    const therapist_fee = calculateTherapistFee(date, time, duration);
-    // Compose booking_time as ISO string
-    const booking_time = date && time ? `${date}T${time}:00` : null;
-    // Registration option
-    const registerOption = document.querySelector('input[name="registerOption"]:checked')?.value;
-    let customer_id = null;
-    if (registerOption === 'yes') {
-      customer_id = await getOrCreateCustomerId(customerName, customerEmail, customerPhone);
-    }
-    // Build payload
-    const payload = {
-      address: addressInput.value,
-      booking_type: bookingType,
-      business_name: businessName,
-      latitude: lat,
-      longitude: lng,
-      service_id: serviceId,
-      duration_minutes: duration,
-      gender_preference: genderPref,
-      fallback_option: fallbackOption,
-      booking_time,
-      parking,
-      therapist_id: therapistId,
-      customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      room_number: roomNumber,
-      booker_name: bookerName,
-      notes,
-      price,
-      therapist_fee,
-      status: 'requested',
-      payment_status: 'pending'
-    };
-    if (customer_id) payload.customer_id = customer_id;
-    if (window.lastCustomerCode) payload.customer_code = window.lastCustomerCode;
-    window.lastBookingCustomerId = customer_id || '';
-    // Insert booking into Supabase
-    const { data, error } = await window.supabase.from('bookings').insert([payload]).select();
-    console.log('Supabase insert result:', { data, error });
-    if (error) {
-      console.error('Supabase insert error:', error);
-      alert('There was an error submitting your booking. Please try again.\n' + (error.message || ''));
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Confirm and Request Booking';
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      console.error('No booking data returned from insert');
-      alert('There was an error submitting your booking. Please try again.');
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Confirm and Request Booking';
-      return;
-    }
-
-    // Generate booking ID and update the record
-    const bookingId = data[0].id;
-    const bookingIdFormatted = generateBookingId(bookingId);
-    window.lastBookingId = bookingIdFormatted;
-    
-    // Update booking with the formatted booking_id and customer_code
-    const { error: updateError } = await window.supabase
-      .from('bookings')
-      .update({ 
-        booking_id: bookingIdFormatted,
-        customer_code: window.lastCustomerCode || null
-      })
-      .eq('id', bookingId);
-    
-    if (updateError) {
-      console.error('Error updating booking with IDs:', updateError);
-    } else {
-      console.log('✅ Updated booking with booking_id:', bookingIdFormatted, 'and customer_code:', window.lastCustomerCode);
-    }
-
-    // Send email notifications
-    console.log('📧 Starting email notifications...');
-    const emailResult = await sendBookingNotifications(payload, bookingIdFormatted);
-    console.log('📧 Email notification result:', emailResult);
-
-    // Show success message
-    alert('Your booking request has been submitted successfully! You will receive a confirmation email shortly.');
-    
-    // Move to confirmation step
-    showStep(10);
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = 'Confirm and Request Booking';
-  });
+function showExistingCustomer(customer) {
+  // Auto-fill the form fields
+  if (customerFirstNameInput) customerFirstNameInput.value = customer.first_name || '';
+  if (customerLastNameInput) customerLastNameInput.value = customer.last_name || '';
+  if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
+  
+  // Show welcome message
+  customerLookupResult.style.display = 'block';
+  customerInfo.innerHTML = `
+    <div>Welcome back, ${customer.first_name || 'Valued Customer'}!</div>
+    <div style="font-size:0.9rem; margin-top:4px;">
+      ${customer.is_guest ? 'Guest Customer' : 'Registered Customer'} • ID: ${customer.customer_code || 'N/A'}
+    </div>
+  `;
+  
+  // Hide registration option for existing customers
+  registrationOption.style.display = 'none';
+  
+  // Update status
+  emailStatus.innerHTML = '<span style="color:#4caf50;">✅ Customer found</span>';
+  
+  console.log('✅ Existing customer loaded:', customer);
 }
 
-// Handle payment submission on Step 9
-const payBtn = document.getElementById('payBtn');
-if (payBtn) {
-  payBtn.addEventListener('click', async function (e) {
-    e.preventDefault();
-    payBtn.disabled = true;
-    payBtn.textContent = 'Processing...';
-    if (!stripe || !card) {
-      alert('Payment form not ready. Please go back and try again.');
-      payBtn.disabled = false;
-      payBtn.textContent = 'Confirm and submit request';
-      return;
-    }
-    setTimeout(() => {
-      document.getElementById('confirmationDetails').innerHTML = '<h3>Booking Confirmed!</h3><p>Your payment was successful and your booking request has been submitted. You will receive a confirmation email shortly.</p>';
-      payBtn.style.display = 'none';
-    }, 1500);
-    // Uncomment below for real Stripe integration:
-    /*
-    const {error, paymentIntent} = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: card },
-    });
-    if (error) {
-      alert(error.message);
-      payBtn.disabled = false;
-      payBtn.textContent = 'Confirm and submit request';
-      return;
-    }
-    // Success UI
-    document.getElementById('confirmationDetails').innerHTML = '<h3>Booking Confirmed!</h3><p>Your payment was successful and your booking request has been submitted. You will receive a confirmation email shortly.</p>';
-    payBtn.style.display = 'none';
-    */
-  });
-} 
-
-// Add styles for time slot buttons
-const style = document.createElement('style');
-style.textContent = `
-.time-slot-btn {
-  display: inline-block;
-  margin: 0 8px 8px 0;
-  padding: 12px 20px;
-  border: 2px solid #00729B;
-  border-radius: 8px;
-  background: #f8f9fa;
-  color: #00729B;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.time-slot-btn.selected, .time-slot-btn:active {
-  background: #00729B;
-  color: #fff;
-  border-color: #00729B;
-  box-shadow: 0 2px 8px rgba(0, 112, 155, 0.15);
-}
-.time-slot-btn:hover:not(.selected) {
-  background: #e3f2fd;
-  border-color: #1976d2;
-}
-`;
-document.head.appendChild(style); 
-
-// Add spinner styles (egg-timer)
-const spinnerStyle = document.createElement('style');
-spinnerStyle.textContent = `
-.spinner-container {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 48px;
-  margin-bottom: 0.5rem;
-}
-.egg-timer {
-  display: inline-block;
-  animation: egg-timer-spin 1.2s linear infinite;
-}
-@keyframes egg-timer-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-`;
-document.head.appendChild(spinnerStyle); 
-
-// Add validation error styles
-const validationStyle = document.createElement('style');
-validationStyle.textContent = `
-.error-message {
-  color: #b00;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-top: 5px;
-  margin-bottom: 10px;
-  animation: shake 0.3s;
-}
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
-}
-`;
-document.head.appendChild(validationStyle); 
-
-// Helper function to generate booking ID
-function generateBookingId(uuid) {
-  const now = new Date();
-  const year = String(now.getFullYear()).slice(-2);
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const seq = uuid.replace(/-/g, '').slice(-4);
-  return `RMM${year}${month}${seq}`;
+function showNewCustomer() {
+  // Clear form fields
+  if (customerFirstNameInput) customerFirstNameInput.value = '';
+  if (customerLastNameInput) customerLastNameInput.value = '';
+  if (customerPhoneInput) customerPhoneInput.value = '';
+  
+  // Hide welcome message
+  customerLookupResult.style.display = 'none';
+  
+  // Show registration option
+  registrationOption.style.display = 'block';
+  
+  // Update status
+  emailStatus.innerHTML = '<span style="color:#ff9800;">🆕 New customer</span>';
+  
+  console.log('🆕 New customer detected');
 }
 
-// Simplified email function - just send client confirmation for now
+function hideCustomerLookup() {
+  customerLookupResult.style.display = 'none';
+  registrationOption.style.display = 'none';
+  emailStatus.innerHTML = '';
+}
+
+// Send booking notifications via EmailJS
 async function sendBookingNotifications(bookingData, bookingId) {
+  console.log('📧 Starting email notifications...', { bookingData, bookingId });
+  
   try {
-    console.log('📧 Starting simple email notification...');
-    
-    // Get service name
-    const { data: service } = await window.supabase
-      .from('services')
-      .select('name')
-      .eq('id', bookingData.service_id)
-      .single();
-    
-    // Prepare simple email data
+    // Prepare email data with correct structure
     const emailData = {
-      booking_id: bookingId, // This is the formatted booking ID
-      customer_code: window.lastCustomerCode || 'N/A',
-      customer_name: bookingData.customer_name,
+      ...bookingData,
+      booking_id: bookingId,
+      first_name: bookingData.first_name || '',
+      last_name: bookingData.last_name || '',
+      customer_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim(),
       customer_email: bookingData.customer_email,
-      service_name: service?.name || 'Massage Service',
-      duration_minutes: bookingData.duration_minutes,
-      booking_time: bookingData.booking_time,
-      address: bookingData.address,
-      price: bookingData.price
+      customer_phone: bookingData.customer_phone,
+      service_name: bookingData.service_name || 'Massage Service',
+      therapist_name: bookingData.therapist_name || 'Available Therapist',
+      booking_date: bookingData.booking_date || new Date().toISOString().split('T')[0],
+      booking_time: bookingData.booking_time || '09:00',
+      total_price: bookingData.price ? `$${bookingData.price.toFixed(2)}` : '$159.00'
     };
-
-    // Send Email 1: Booking Request Received to client
-    const clientResult = await window.EmailService.sendBookingRequestReceived(emailData);
-    console.log('Email 1 - Booking Request Received result:', clientResult);
     
-    return clientResult;
-
+    // Send email notification
+    const emailResult = await window.EmailService.sendBookingRequestReceived(emailData);
+    
+    if (emailResult.success) {
+      console.log('✅ Email notification sent successfully');
+      return { success: true, message: 'Email sent successfully' };
+    } else {
+      console.error('❌ Email notification failed:', emailResult.error);
+      return { success: false, error: emailResult.error };
+    }
+    
   } catch (error) {
-    console.error('Error sending booking notifications:', error);
-    return { success: false, error };
+    console.error('❌ Error in sendBookingNotifications:', error);
+    return { success: false, error: error.message };
   }
-} 
+}
+
+// Booking submission logic
+document.addEventListener('DOMContentLoaded', function() {
+  const confirmBtn = document.querySelector('#step9 .btn.next.primary');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async function (e) {
+      e.preventDefault();
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Submitting...';
+      
+      try {
+        // Gather all booking details
+        const addressInput = document.getElementById('address');
+        const bookingType = document.querySelector('input[name="bookingType"]:checked')?.value || null;
+        let businessName = '';
+        if (bookingType === 'Corporate Event/Office') {
+          businessName = document.getElementById('businessName').value;
+        } else if (bookingType === 'Hotel/Accommodation') {
+          businessName = addressInput.dataset.businessName || '';
+        }
+        
+        const lat = addressInput.dataset.lat ? Number(addressInput.dataset.lat) : null;
+        const lng = addressInput.dataset.lng ? Number(addressInput.dataset.lng) : null;
+        const serviceId = document.getElementById('service').value;
+        const duration = document.getElementById('duration').value;
+        const genderPref = document.querySelector('input[name="genderPref"]:checked')?.value;
+        const fallbackOption = document.querySelector('input[name="fallbackOption"]:checked')?.value;
+        const date = document.getElementById('date').value;
+        const time = document.getElementById('time').value;
+        const therapistId = document.querySelector('input[name="therapistId"]:checked')?.value;
+        const parking = document.getElementById('parking').value;
+        
+        // Get customer details
+        const customerFirstName = document.getElementById('customerFirstName')?.value || '';
+        const customerLastName = document.getElementById('customerLastName')?.value || '';
+        const customerEmail = document.getElementById('customerEmail').value;
+        const customerPhone = document.getElementById('customerPhone').value;
+        const roomNumber = document.getElementById('roomNumber').value;
+        const bookerName = document.getElementById('bookerName').value;
+        const notes = document.getElementById('notes').value;
+        const price = document.getElementById('priceAmount').textContent ? parseFloat(document.getElementById('priceAmount').textContent) : null;
+        
+        // Calculate therapist fee
+        const therapist_fee = calculateTherapistFee(date, time, duration);
+        
+        // Compose booking_time as ISO string
+        const booking_time = date && time ? `${date}T${time}:00` : null;
+        
+        // Registration option
+        const registerOption = document.querySelector('input[name="registerOption"]:checked')?.value;
+        let customer_id = null;
+        
+        if (registerOption === 'yes') {
+          customer_id = await getOrCreateCustomerId(customerFirstName, customerLastName, customerEmail, customerPhone, false);
+        } else {
+          // Create guest customer
+          customer_id = await getOrCreateCustomerId(customerFirstName, customerLastName, customerEmail, customerPhone, true);
+        }
+        
+        // Get service name for email
+        const serviceSelect = document.getElementById('service');
+        const serviceName = serviceSelect.selectedOptions[0]?.textContent || 'Massage Service';
+        
+        // Get therapist name for email
+        const therapistRadio = document.querySelector('input[name="therapistId"]:checked');
+        const therapistName = therapistRadio?.dataset?.name || 'Available Therapist';
+        
+        // Build payload
+        const payload = {
+          address: addressInput.value,
+          booking_type: bookingType,
+          business_name: businessName,
+          latitude: lat,
+          longitude: lng,
+          service_id: serviceId,
+          duration_minutes: duration,
+          gender_preference: genderPref,
+          fallback_option: fallbackOption,
+          booking_time,
+          parking,
+          therapist_id: therapistId,
+          first_name: customerFirstName,
+          last_name: customerLastName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
+          room_number: roomNumber,
+          booker_name: bookerName,
+          notes,
+          price,
+          therapist_fee,
+          status: 'requested',
+          payment_status: 'pending'
+        };
+        
+        if (customer_id) payload.customer_id = customer_id;
+        if (window.lastCustomerCode) payload.customer_code = window.lastCustomerCode;
+        
+        window.lastBookingCustomerId = customer_id || '';
+        
+        // Insert booking into Supabase
+        const { data, error } = await window.supabase.from('bookings').insert([payload]).select();
+        console.log('Supabase insert result:', { data, error });
+        
+        if (error) {
+          console.error('Supabase insert error:', error);
+          alert('There was an error submitting your booking. Please try again.\n' + (error.message || ''));
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Confirm and Request Booking';
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.error('No booking data returned from insert');
+          alert('There was an error submitting your booking. Please try again.');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Confirm and Request Booking';
+          return;
+        }
+
+        // Generate booking ID and update the record
+        const bookingId = data[0].id;
+        const bookingIdFormatted = generateBookingId(bookingId);
+        window.lastBookingId = bookingIdFormatted;
+        
+        // Update booking with the formatted booking_id and customer_code
+        const { error: updateError } = await window.supabase
+          .from('bookings')
+          .update({ 
+            booking_id: bookingIdFormatted,
+            customer_code: window.lastCustomerCode || null
+          })
+          .eq('id', bookingId);
+        
+        if (updateError) {
+          console.error('Error updating booking with IDs:', updateError);
+        } else {
+          console.log('✅ Updated booking with booking_id:', bookingIdFormatted, 'and customer_code:', window.lastCustomerCode);
+        }
+
+        // Send email notifications
+        console.log('📧 Starting email notifications...');
+        const emailData = {
+          ...payload,
+          service_name: serviceName,
+          therapist_name: therapistName,
+          booking_date: date,
+          booking_time: time
+        };
+        const emailResult = await sendBookingNotifications(emailData, bookingIdFormatted);
+        console.log('📧 Email notification result:', emailResult);
+
+        // Show success message
+        alert('Your booking request has been submitted successfully! You will receive a confirmation email shortly.');
+        
+        // Move to confirmation step
+        showStep(10);
+        
+      } catch (error) {
+        console.error('❌ Error in booking submission:', error);
+        alert('There was an error submitting your booking. Please try again.');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm and Request Booking';
+      }
+    });
+  }
+}); 

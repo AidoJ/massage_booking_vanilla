@@ -324,14 +324,340 @@ input:focus, select:focus {
     margin: 0;
   }
   
-  .progress-step {
-    width: 30px;
-    height: 30px;
-    font-size: 12px;
+  /* Enhanced progress bar for mobile */
+  .progress-container {
+    padding: 0 10px;
+    margin-bottom: 20px;
   }
   
-  input, select {
+  .progress-bar {
+    min-height: 80px;
+  }
+  
+  .progress-step {
+    min-width: 40px;
+  }
+  
+  .progress-step .bubble {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .progress-step .progress-label {
+    font-size: 0.75rem;
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 4px;
+  }
+  
+  /* Enhanced form fields for mobile */
+  input, select, textarea {
     font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px 15px;
+    margin-bottom: 15px;
+  }
+  
+  /* Enhanced horizontal form groups for mobile */
+  .form-group.horizontal {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .form-group.horizontal > div {
+    width: 100%;
+    margin-right: 0;
+  }
+  
+  .form-group.horizontal label {
+    text-align: left;
+    min-width: 0;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+  
+  .form-group.horizontal input,
+  .form-group.horizontal textarea {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  /* Enhanced radio groups for mobile */
+  .radio-group {
+    gap: 12px;
+    margin-bottom: 15px;
+  }
+  
+  .radio-group.horizontal {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .radio-group.horizontal .radio-inline {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    margin-right: 0;
+  }
+  
+  .radio-inline {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+  
+  /* Enhanced time slots for mobile */
+  .time-slot-btn {
+    width: calc(50% - 5px);
+    margin: 2px;
+    padding: 12px 8px;
+    font-size: 0.9rem;
+  }
+  
+  /* Enhanced therapist selection for mobile */
+  .therapist-card {
+    padding: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .therapist-radio-label {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .therapist-radio-custom {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+  }
+  
+  /* Enhanced customer details for mobile */
+  #customerLookupResult {
+    margin: 15px 0;
+    padding: 15px;
+  }
+  
+  #registrationOption {
+    margin: 15px 0;
+  }
+  
+  #customerCodeDisplay {
+    margin: 15px 0;
+    padding: 15px;
+  }
+  
+  /* Enhanced booking summary for mobile */
+  .booking-summary {
+    padding: 15px;
+  }
+  
+  .booking-summary p {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+  
+  /* Enhanced price display for mobile */
+  .price-display {
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  /* Enhanced card element for mobile */
+  .card-element {
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  /* Better spacing for all form elements */
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+  }
+  
+  /* Enhanced error messages for mobile */
+  .error-message {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    margin-top: 5px;
+  }
+  
+  /* Enhanced status messages for mobile */
+  #emailStatus, #address-autocomplete-status, #gender-availability-status {
+    font-size: 0.85rem;
+    margin-top: 8px;
+    padding: 8px 12px;
+  }
+  
+  /* Enhanced spinner for mobile */
+  .spinner-container {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  /* Better touch targets */
+  .btn {
+    min-height: 44px;
+    padding: 12px 20px;
+  }
+  
+  input[type="radio"], input[type="checkbox"] {
+    min-width: 20px;
+    min-height: 20px;
+  }
+  
+  /* Time slots container mobile improvements */
+  #timeSlotsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 15px 0;
+  }
+  
+  /* Therapist selection container mobile improvements */
+  #therapistSelection {
+    margin: 15px 0;
+  }
+  
+  /* Customer details form mobile improvements */
+  #step6 .step-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  /* Booking type wrapper mobile improvements */
+  .booking-type-wrapper {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .booking-type-wrapper .custom-radio {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  /* Business name group mobile improvements */
+  #businessNameGroup {
+    margin: 15px 0;
+  }
+  
+  /* Notes textarea mobile improvements */
+  #notes {
+    min-height: 100px;
+    margin: 15px 0;
+  }
+  
+  /* Room number and booker name mobile improvements */
+  #roomNumber, #bookerName {
+    margin: 15px 0;
+  }
+}
+
+/* Time slot button styles */
+.time-slot-btn {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 2px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.time-slot-btn:hover {
+  background: #e9ecef;
+  border-color: #007e8c;
+  color: #007e8c;
+}
+
+.time-slot-btn.selected {
+  background: #007e8c;
+  border-color: #007e8c;
+  color: white;
+}
+
+.time-slot-btn:disabled {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Spinner container styles */
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.egg-timer {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Additional mobile improvements for very small screens */
+@media (max-width: 480px) {
+  body {
+    padding: 5px;
+  }
+  
+  .step-header {
+    padding: 15px;
+  }
+  
+  .step-content {
+    padding: 15px;
+  }
+  
+  .step-header h2 {
+    font-size: 18px;
+  }
+  
+  .progress-step .bubble {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .progress-step .progress-label {
+    font-size: 0.7rem;
+  }
+  
+  .time-slot-btn {
+    width: 100%;
+    margin: 2px 0;
+  }
+  
+  .radio-inline {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+  
+  input, select, textarea {
+    padding: 10px 12px;
+  }
+  
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
   }
 }
 

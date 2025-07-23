@@ -16,7 +16,7 @@
 ## 📧 EmailJS Setup
 
 ### 1. Update Your EmailJS Template
-Go to your EmailJS dashboard and update template `template_zh8jess` to handle different email types:
+Go to your EmailJS dashboard and update template `template_1qnwhwc` to handle different email types:
 
 ```html
 <!-- Add this conditional logic to your template -->
