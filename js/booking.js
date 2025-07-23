@@ -996,7 +996,7 @@ async function updateTherapistSelection() {
     card.innerHTML = `
       <label class="therapist-radio-label" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
         <span class="therapist-name">${t.first_name} ${t.last_name}</span>
-        <input type="radio" name="therapistId" value="${t.id}" class="therapist-radio-custom">
+        <input type="radio" name="therapistId" value="${t.id}" data-name="${t.first_name} ${t.last_name}" class="therapist-radio-custom">
       </label>
     `;
     therapistSelectionDiv.appendChild(card);
