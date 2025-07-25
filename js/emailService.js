@@ -5,9 +5,9 @@ let EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
 
 // Initialize EmailJS when the script loads
 (function() {
-  if (typeof emailjs !== 'undefined') {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-    console.log('✅ EmailJS initialized successfully');
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+      console.log('✅ EmailJS initialized successfully');
   }
 })();
 

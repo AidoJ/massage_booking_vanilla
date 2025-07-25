@@ -21,30 +21,38 @@ function calculateTherapistFee(dateVal, timeVal, durationVal) {
   const rate = isAfterhours ? window.therapistAfterhoursRate : window.therapistDaytimeRate;
   if (!rate) return null;
   const durationMultiplier = Number(durationVal) / 60;
-  return Math.round(rate * durationMultiplier * 100) / 100;
+  let fee = rate * durationMultiplier;
+  
+  // Apply duration uplift percentage if available
+  const duration = window.durationsCache.find(d => d.duration_minutes === Number(durationVal));
+  if (duration && duration.uplift_percentage) {
+    fee += fee * (Number(duration.uplift_percentage) / 100);
+  }
+  
+  return Math.round(fee * 100) / 100;
 }
 
 // Global showStep function - accessible from anywhere
 function showStep(stepId) {
   const steps = Array.from(document.querySelectorAll('.step'));
   const progressSteps = Array.from(document.querySelectorAll('.progress-step'));
-  
-  steps.forEach(step => {
-    step.classList.remove('active');
-  });
-  const current = document.getElementById(stepId);
-  if (current) current.classList.add('active');
 
-  // Update progress bar
-  const idx = steps.findIndex(s => s.id === stepId);
-  progressSteps.forEach((ps, i) => {
-    if (i === idx) {
-      ps.classList.add('active');
-    } else {
-      ps.classList.remove('active');
-    }
-  });
-}
+    steps.forEach(step => {
+      step.classList.remove('active');
+    });
+    const current = document.getElementById(stepId);
+    if (current) current.classList.add('active');
+
+    // Update progress bar
+    const idx = steps.findIndex(s => s.id === stepId);
+    progressSteps.forEach((ps, i) => {
+      if (i === idx) {
+        ps.classList.add('active');
+      } else {
+        ps.classList.remove('active');
+      }
+    });
+  }
 
 document.addEventListener('DOMContentLoaded', function () {
   const steps = Array.from(document.querySelectorAll('.step'));
@@ -299,30 +307,30 @@ document.addEventListener('DOMContentLoaded', function () {
   // Fetch and populate services and durations from Supabase
   async function populateTherapyOptions() {
     try {
-      // Fetch services
-      const { data: services, error: serviceError } = await window.supabase
-        .from('services')
-        .select('id, name, is_active')
-        .eq('is_active', true)
-        .order('sort_order');
-      console.log('Supabase services:', services, 'Error:', serviceError);
+    // Fetch services
+    const { data: services, error: serviceError } = await window.supabase
+      .from('services')
+      .select('id, name, service_base_price, is_active')
+      .eq('is_active', true)
+      .order('sort_order');
+    console.log('Supabase services:', services, 'Error:', serviceError);
       
-      const serviceSelect = document.getElementById('service');
-      if (serviceSelect) {
-        serviceSelect.innerHTML = '<option value="">Select a service...</option>';
+    const serviceSelect = document.getElementById('service');
+    if (serviceSelect) {
+      serviceSelect.innerHTML = '<option value="">Select a service...</option>';
         if (services && services.length > 0) {
-          services.forEach(service => {
-            const opt = document.createElement('option');
-            opt.value = service.id;
-            opt.textContent = service.name;
-            serviceSelect.appendChild(opt);
-          });
+        services.forEach(service => {
+          const opt = document.createElement('option');
+          opt.value = service.id;
+          opt.textContent = service.name;
+          serviceSelect.appendChild(opt);
+        });
         } else {
           // Add fallback options if no data loaded
           const fallbackServices = [
-            { id: '1', name: 'Relaxation Massage' },
-            { id: '2', name: 'Deep Tissue Massage' },
-            { id: '3', name: 'Sports Massage' }
+            { id: '1', name: 'Relaxation Massage', service_base_price: 80 },
+            { id: '2', name: 'Deep Tissue Massage', service_base_price: 90 },
+            { id: '3', name: 'Sports Massage', service_base_price: 100 }
           ];
           fallbackServices.forEach(service => {
             const opt = document.createElement('option');
@@ -334,24 +342,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
       
-      // Fetch durations
-      const { data: durations, error: durationError } = await window.supabase
-        .from('duration_pricing')
-        .select('id, duration_minutes, uplift_percentage, is_active')
-        .eq('is_active', true)
-        .order('sort_order');
-      console.log('Supabase durations:', durations, 'Error:', durationError);
+    // Fetch durations
+    const { data: durations, error: durationError } = await window.supabase
+      .from('duration_pricing')
+      .select('id, duration_minutes, uplift_percentage, is_active')
+      .eq('is_active', true)
+      .order('sort_order');
+    console.log('Supabase durations:', durations, 'Error:', durationError);
       
-      const durationSelect = document.getElementById('duration');
-      if (durationSelect) {
-        durationSelect.innerHTML = '<option value="">Select duration...</option>';
+    const durationSelect = document.getElementById('duration');
+    if (durationSelect) {
+      durationSelect.innerHTML = '<option value="">Select duration...</option>';
         if (durations && durations.length > 0) {
-          durations.forEach(duration => {
-            const opt = document.createElement('option');
-            opt.value = duration.duration_minutes;
+        durations.forEach(duration => {
+          const opt = document.createElement('option');
+          opt.value = duration.duration_minutes;
             opt.textContent = `${duration.duration_minutes} minutes`;
-            durationSelect.appendChild(opt);
-          });
+          durationSelect.appendChild(opt);
+        });
         } else {
           // Add fallback options if no data loaded
           const fallbackDurations = [
@@ -394,9 +402,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  let servicesCache = [];
-  let durationsCache = [];
-  let timePricingRulesCache = [];
+  window.servicesCache = [];
+  window.durationsCache = [];
+  window.timePricingRulesCache = [];
   window.businessOpeningHour = undefined;
   window.businessClosingHour = undefined;
   window.beforeServiceBuffer = undefined;
@@ -415,61 +423,61 @@ console.log('Globals:', {
 
   async function fetchPricingData() {
     try {
-      // Fetch services
-      const { data: services } = await window.supabase
-        .from('services')
-        .select('id, name, service_base_price, is_active')
-        .eq('is_active', true)
-        .order('sort_order');
-      servicesCache = services || [];
+    // Fetch services
+    const { data: services } = await window.supabase
+      .from('services')
+      .select('id, name, service_base_price, is_active')
+      .eq('is_active', true)
+      .order('sort_order');
+    window.servicesCache = services || [];
 
-      // Fetch durations
-      const { data: durations } = await window.supabase
-        .from('duration_pricing')
-        .select('id, duration_minutes, uplift_percentage, is_active')
-        .eq('is_active', true)
-        .order('sort_order');
-      durationsCache = durations || [];
+    // Fetch durations
+    const { data: durations } = await window.supabase
+      .from('duration_pricing')
+      .select('id, duration_minutes, uplift_percentage, is_active')
+      .eq('is_active', true)
+      .order('sort_order');
+    window.durationsCache = durations || [];
 
-      // Fetch time pricing rules
-      const { data: timeRules } = await window.supabase
-        .from('time_pricing_rules')
-        .select('id, day_of_week, start_time, end_time, uplift_percentage, is_active, label')
-        .eq('is_active', true)
-        .order('sort_order');
-      timePricingRulesCache = timeRules || [];
+    // Fetch time pricing rules
+    const { data: timeRules } = await window.supabase
+      .from('time_pricing_rules')
+      .select('id, day_of_week, start_time, end_time, uplift_percentage, is_active, label')
+      .eq('is_active', true)
+      .order('sort_order');
+    window.timePricingRulesCache = timeRules || [];
     } catch (error) {
       console.error('❌ Error fetching pricing data:', error);
       // Use fallback data
-      servicesCache = [
+      window.servicesCache = [
         { id: '1', name: 'Relaxation Massage', service_base_price: 80 },
         { id: '2', name: 'Deep Tissue Massage', service_base_price: 90 },
         { id: '3', name: 'Sports Massage', service_base_price: 100 }
       ];
-      durationsCache = [
+      window.durationsCache = [
         { id: '1', duration_minutes: 30, uplift_percentage: 0 },
         { id: '2', duration_minutes: 60, uplift_percentage: 0 },
         { id: '3', duration_minutes: 90, uplift_percentage: 25 }
       ];
-      timePricingRulesCache = [];
+      window.timePricingRulesCache = [];
     }
   }
 
   async function fetchSettings() {
     try {
-      const { data: settings } = await window.supabase
-        .from('system_settings')
-        .select('key, value');
-      if (settings) {
-        for (const s of settings) {
-          if (s.key === 'business_opening_time') window.businessOpeningHour = Number(s.value);
-          if (s.key === 'business_closing_time') window.businessClosingHour = Number(s.value);
-          if (s.key === 'before_service_buffer_time') window.beforeServiceBuffer = Number(s.value);
-          if (s.key === 'after_service_buffer_time') window.afterServiceBuffer = Number(s.value);
-          if (s.key === 'min_booking_advance_hours') window.minBookingAdvanceHours = Number(s.value);
-          if (s.key === 'therapist_daytime_hourly_rate') window.therapistDaytimeRate = Number(s.value);
-          if (s.key === 'therapist_afterhours_hourly_rate') window.therapistAfterhoursRate = Number(s.value);
-        }
+    const { data: settings } = await window.supabase
+      .from('system_settings')
+      .select('key, value');
+    if (settings) {
+      for (const s of settings) {
+        if (s.key === 'business_opening_time') window.businessOpeningHour = Number(s.value);
+        if (s.key === 'business_closing_time') window.businessClosingHour = Number(s.value);
+        if (s.key === 'before_service_buffer_time') window.beforeServiceBuffer = Number(s.value);
+        if (s.key === 'after_service_buffer_time') window.afterServiceBuffer = Number(s.value);
+        if (s.key === 'min_booking_advance_hours') window.minBookingAdvanceHours = Number(s.value);
+        if (s.key === 'therapist_daytime_hourly_rate') window.therapistDaytimeRate = Number(s.value);
+        if (s.key === 'therapist_afterhours_hourly_rate') window.therapistAfterhoursRate = Number(s.value);
+      }
       }
     } catch (error) {
       console.error('❌ Error fetching settings:', error);
@@ -492,21 +500,25 @@ console.log('Globals:', {
     if (!serviceId || !durationVal || !dateVal || !timeVal) return;
 
     // Get base price
-    const service = servicesCache.find(s => s.id === serviceId);
+    const service = window.servicesCache.find(s => s.id === serviceId);
     if (!service) return;
-    let price = Number(service.service_base_price);
+    let basePrice = Number(service.service_base_price);
+    let price = basePrice;
+    let breakdown = [`Base Price: $${basePrice.toFixed(2)}`];
 
     // Get duration uplift
-    const duration = durationsCache.find(d => d.duration_minutes === Number(durationVal));
+    const duration = window.durationsCache.find(d => d.duration_minutes === Number(durationVal));
     if (duration && duration.uplift_percentage) {
-      price += price * (Number(duration.uplift_percentage) / 100);
+      const durationUplift = basePrice * (Number(duration.uplift_percentage) / 100);
+      price += durationUplift;
+      breakdown.push(`Duration Uplift (${duration.uplift_percentage}%): +$${durationUplift.toFixed(2)}`);
     }
 
     // Get day of week and time
     const dayOfWeek = new Date(dateVal).getDay(); // 0=Sunday, 6=Saturday
     // Find matching time pricing rule from table
     let timeUplift = 0;
-    for (const rule of timePricingRulesCache) {
+    for (const rule of window.timePricingRulesCache) {
       if (Number(rule.day_of_week) === dayOfWeek) {
         if (timeVal >= rule.start_time && timeVal < rule.end_time) {
           timeUplift = Number(rule.uplift_percentage);
@@ -515,12 +527,14 @@ console.log('Globals:', {
       }
     }
     if (timeUplift) {
-      price += price * (timeUplift / 100);
+      const timeUpliftAmount = basePrice * (timeUplift / 100);
+      price += timeUpliftAmount;
+      breakdown.push(`Time Uplift (${timeUplift}%): +$${timeUpliftAmount.toFixed(2)}`);
     }
 
-    // Update price display (no breakdown)
+    // Update price display with breakdown
     document.getElementById('priceAmount').textContent = price.toFixed(2);
-    document.getElementById('priceBreakdown').innerHTML = '';
+    document.getElementById('priceBreakdown').innerHTML = breakdown.join('<br>');
   }
 
   // Update price when relevant fields change
@@ -1103,7 +1117,11 @@ async function populateBookingSummary() {
   const bookerName = document.getElementById('bookerName')?.value || '';
   const notes = document.getElementById('notes')?.value || '';
   const price = document.getElementById('priceAmount').textContent;
-  const therapist_fee = 0;
+  const priceBreakdown = document.getElementById('priceBreakdown').innerHTML;
+  
+  // Calculate therapist fee
+  const therapist_fee = calculateTherapistFee(date, time, duration);
+  const therapist_fee_display = therapist_fee ? `$${therapist_fee.toFixed(2)}` : 'N/A';
   // Get customer_id and booking_id if available
   const customer_id = window.lastBookingCustomerId || '';
   const booking_id = window.lastBookingId || '';
@@ -1127,7 +1145,8 @@ async function populateBookingSummary() {
     <p><strong>Booker Name:</strong> ${bookerName}</p>
     <p><strong>Notes:</strong> ${notes}</p>
     <p><strong>Estimated Price:</strong> $${price}</p>
-    <p><strong>Therapist Fee:</strong> $${therapist_fee}</p>
+    ${priceBreakdown ? `<div style="margin-left: 20px; font-size: 0.9em; color: #666;">${priceBreakdown}</div>` : ''}
+    <p><strong>Therapist Fee:</strong> ${therapist_fee_display}</p>
   `;
 }
 // Show summary when entering Step 9
@@ -1461,34 +1480,34 @@ async function sendBookingNotifications(bookingData, bookingId) {
 
 // Booking submission logic
 document.addEventListener('DOMContentLoaded', function() {
-  const confirmBtn = document.querySelector('#step9 .btn.next.primary');
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', async function (e) {
-      e.preventDefault();
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Submitting...';
+const confirmBtn = document.querySelector('#step9 .btn.next.primary');
+if (confirmBtn) {
+  confirmBtn.addEventListener('click', async function (e) {
+    e.preventDefault();
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Submitting...';
       
       try {
-        // Gather all booking details
-        const addressInput = document.getElementById('address');
-        const bookingType = document.querySelector('input[name="bookingType"]:checked')?.value || null;
-        let businessName = '';
-        if (bookingType === 'Corporate Event/Office') {
-          businessName = document.getElementById('businessName').value;
-        } else if (bookingType === 'Hotel/Accommodation') {
-          businessName = addressInput.dataset.businessName || '';
-        }
+    // Gather all booking details
+    const addressInput = document.getElementById('address');
+    const bookingType = document.querySelector('input[name="bookingType"]:checked')?.value || null;
+    let businessName = '';
+    if (bookingType === 'Corporate Event/Office') {
+      businessName = document.getElementById('businessName').value;
+    } else if (bookingType === 'Hotel/Accommodation') {
+      businessName = addressInput.dataset.businessName || '';
+    }
         
         const lat = addressInput.dataset.lat ? Number(addressInput.dataset.lat) : null;
         const lng = addressInput.dataset.lng ? Number(addressInput.dataset.lng) : null;
-        const serviceId = document.getElementById('service').value;
+    const serviceId = document.getElementById('service').value;
         const duration = document.getElementById('duration').value;
         const genderPref = document.querySelector('input[name="genderPref"]:checked')?.value;
         const fallbackOption = document.querySelector('input[name="fallbackOption"]:checked')?.value;
-        const date = document.getElementById('date').value;
-        const time = document.getElementById('time').value;
+    const date = document.getElementById('date').value;
+    const time = document.getElementById('time').value;
         const therapistId = document.querySelector('input[name="therapistId"]:checked')?.value;
-        const parking = document.getElementById('parking').value;
+    const parking = document.getElementById('parking').value;
         
         // Get customer details
         const customerFirstName = document.getElementById('customerFirstName')?.value || '';
@@ -1498,19 +1517,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const roomNumber = document.getElementById('roomNumber')?.value || '';
         const bookerName = document.getElementById('bookerName')?.value || '';
         const notes = document.getElementById('notes')?.value || '';
-        const price = document.getElementById('priceAmount').textContent ? parseFloat(document.getElementById('priceAmount').textContent) : null;
+    const price = document.getElementById('priceAmount').textContent ? parseFloat(document.getElementById('priceAmount').textContent) : null;
         
-        // Calculate therapist fee
-        const therapist_fee = 0;
+    // Calculate therapist fee
+        const therapist_fee = calculateTherapistFee(date, time, duration) || 0;
         
-        // Compose booking_time as ISO string
-        const booking_time = date && time ? `${date}T${time}:00` : null;
+    // Compose booking_time as ISO string
+    const booking_time = date && time ? `${date}T${time}:00` : null;
         
-        // Registration option
-        const registerOption = document.querySelector('input[name="registerOption"]:checked')?.value;
-        let customer_id = null;
+    // Registration option
+    const registerOption = document.querySelector('input[name="registerOption"]:checked')?.value;
+    let customer_id = null;
         
-        if (registerOption === 'yes') {
+    if (registerOption === 'yes') {
           customer_id = await getOrCreateCustomerId(customerFirstName, customerLastName, customerEmail, customerPhone, false);
         } else {
           // Create guest customer
@@ -1525,67 +1544,67 @@ document.addEventListener('DOMContentLoaded', function() {
         const therapistRadio = document.querySelector('input[name="therapistId"]:checked');
         const therapistName = therapistRadio?.dataset?.name || 'Available Therapist';
         
-        // Build payload
-        const payload = {
-          address: addressInput.value,
-          booking_type: bookingType,
-          business_name: businessName,
-          latitude: lat,
-          longitude: lng,
-          service_id: serviceId,
-          duration_minutes: duration,
-          gender_preference: genderPref,
-          fallback_option: fallbackOption,
-          booking_time,
-          parking,
-          therapist_id: therapistId,
+    // Build payload
+    const payload = {
+      address: addressInput.value,
+      booking_type: bookingType,
+      business_name: businessName,
+      latitude: lat,
+      longitude: lng,
+      service_id: serviceId,
+      duration_minutes: duration,
+      gender_preference: genderPref,
+      fallback_option: fallbackOption,
+      booking_time,
+      parking,
+      therapist_id: therapistId,
           first_name: customerFirstName,
           last_name: customerLastName,
-          customer_email: customerEmail,
-          customer_phone: customerPhone,
-          room_number: roomNumber,
-          booker_name: bookerName,
-          notes,
-          price,
-          therapist_fee,
-          status: 'requested',
-          payment_status: 'pending'
-        };
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      room_number: roomNumber,
+      booker_name: bookerName,
+      notes,
+      price,
+      therapist_fee,
+      status: 'requested',
+      payment_status: 'pending'
+    };
         
         // Generate booking ID BEFORE inserting
         const bookingIdFormatted = await generateSequentialBookingId();
         window.lastBookingId = bookingIdFormatted;
         
-        if (customer_id) payload.customer_id = customer_id;
-        if (window.lastCustomerCode) payload.customer_code = window.lastCustomerCode;
+    if (customer_id) payload.customer_id = customer_id;
+    if (window.lastCustomerCode) payload.customer_code = window.lastCustomerCode;
         payload.booking_id = bookingIdFormatted; // Add booking ID to payload
         
-        window.lastBookingCustomerId = customer_id || '';
+    window.lastBookingCustomerId = customer_id || '';
         
         // Insert booking into Supabase with booking_id already included
-        const { data, error } = await window.supabase.from('bookings').insert([payload]).select();
-        console.log('Supabase insert result:', { data, error });
+    const { data, error } = await window.supabase.from('bookings').insert([payload]).select();
+    console.log('Supabase insert result:', { data, error });
         
-        if (error) {
-          console.error('Supabase insert error:', error);
-          alert('There was an error submitting your booking. Please try again.\n' + (error.message || ''));
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Confirm and Request Booking';
-          return;
-        }
+    if (error) {
+      console.error('Supabase insert error:', error);
+      alert('There was an error submitting your booking. Please try again.\n' + (error.message || ''));
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm and Request Booking';
+      return;
+    }
 
-        if (!data || data.length === 0) {
-          console.error('No booking data returned from insert');
-          alert('There was an error submitting your booking. Please try again.');
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Confirm and Request Booking';
-          return;
-        }
+    if (!data || data.length === 0) {
+      console.error('No booking data returned from insert');
+      alert('There was an error submitting your booking. Please try again.');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm and Request Booking';
+      return;
+    }
 
         console.log('✅ Booking created with booking_id:', bookingIdFormatted, 'and customer_code:', window.lastCustomerCode);
 
-        // Send email notifications
-        console.log('📧 Starting email notifications...');
+    // Send email notifications
+    console.log('📧 Starting email notifications...');
         const emailData = {
           ...payload,
           service_name: serviceName,
@@ -1594,19 +1613,19 @@ document.addEventListener('DOMContentLoaded', function() {
           booking_time: time
         };
         const emailResult = await sendBookingNotifications(emailData, bookingIdFormatted);
-        console.log('📧 Email notification result:', emailResult);
+    console.log('📧 Email notification result:', emailResult);
 
-        // Show success message
-        alert('Your booking request has been submitted successfully! You will receive a confirmation email shortly.');
-        
-        // Move to confirmation step
-        showStep(10);
+    // Show success message
+    alert('Your booking request has been submitted successfully! You will receive a confirmation email shortly.');
+    
+    // Move to confirmation step
+    showStep(10);
         
       } catch (error) {
         console.error('❌ Error in booking submission:', error);
         alert('There was an error submitting your booking. Please try again.');
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirm and Request Booking';
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Confirm and Request Booking';
       }
     });
   }
