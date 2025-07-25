@@ -1,6 +1,6 @@
 // EmailJS configuration - will be set from environment variables
 let EMAILJS_SERVICE_ID = 'service_puww2kb';
-let EMAILJS_TEMPLATE_ID = 'template_1qnwhwc'; // Use the new template
+let EMAILJS_TEMPLATE_ID = 'template_zqjm4om'; // Use the new comprehensive template
 let EMAILJS_PUBLIC_KEY = 'V8qq2pjH8vfh3a6q3';
 
 // Initialize EmailJS when the script loads
