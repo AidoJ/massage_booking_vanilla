@@ -5,8 +5,10 @@
 // Add this function at the very top-level scope so it is accessible everywhere
 function calculateTherapistFee(dateVal, timeVal, durationVal) {
   if (!dateVal || !timeVal || !durationVal) return null;
+  
   const dayOfWeek = new Date(dateVal).getDay();
   const hour = parseInt(timeVal.split(':')[0], 10);
+  
   // Determine if afterhours/weekend
   let isAfterhours = false;
   if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -18,15 +20,18 @@ function calculateTherapistFee(dateVal, timeVal, durationVal) {
       }
     }
   }
-  const rate = isAfterhours ? window.therapistAfterhoursRate : window.therapistDaytimeRate;
-  if (!rate) return null;
-  const durationMultiplier = Number(durationVal) / 60;
-  let fee = rate * durationMultiplier;
+  
+  // Get appropriate hourly rate
+  const hourlyRate = isAfterhours ? window.therapistAfterhoursRate : window.therapistDaytimeRate;
+  if (!hourlyRate) return null;
+  
+  // Calculate base fee: hourly rate (this is the base fee, not multiplied by duration)
+  let fee = hourlyRate;
   
   // Apply duration uplift percentage if available
   const duration = window.durationsCache.find(d => d.duration_minutes === Number(durationVal));
   if (duration && duration.uplift_percentage) {
-    const durationUplift = fee * (Number(duration.uplift_percentage) / 100);
+    const durationUplift = hourlyRate * (Number(duration.uplift_percentage) / 100);
     fee += durationUplift;
   }
   
