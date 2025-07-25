@@ -348,8 +348,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (durations && durations.length > 0) {
           durations.forEach(duration => {
             const opt = document.createElement('option');
-            opt.value = duration.id;
+            opt.value = duration.duration_minutes;
             opt.textContent = `${duration.duration_minutes} minutes`;
+            console.log('DEBUG: Creating duration option with value:', duration.duration_minutes, 'ID:', duration.id);
             durationSelect.appendChild(opt);
           });
         } else {
@@ -361,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
           ];
           fallbackDurations.forEach(duration => {
             const opt = document.createElement('option');
-            opt.value = duration.id;
+            opt.value = duration.duration_minutes;
             opt.textContent = `${duration.duration_minutes} minutes`;
             durationSelect.appendChild(opt);
           });
@@ -386,9 +387,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (durationSelect) {
         durationSelect.innerHTML = `
           <option value="">Select duration...</option>
-          <option value="1">30 minutes</option>
-          <option value="2">60 minutes</option>
-          <option value="3">90 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">60 minutes</option>
+          <option value="90">90 minutes</option>
         `;
       }
     }
@@ -497,7 +498,7 @@ console.log('Globals:', {
     let price = Number(service.service_base_price);
 
     // Get duration uplift
-    const duration = durationsCache.find(d => String(d.duration_minutes) === String(durationVal));
+    const duration = durationsCache.find(d => d.duration_minutes === Number(durationVal));
     if (duration && duration.uplift_percentage) {
       price += price * (Number(duration.uplift_percentage) / 100);
     }
@@ -1097,7 +1098,7 @@ function populateBookingSummary() {
   const bookerName = document.getElementById('bookerName')?.value || '';
   const notes = document.getElementById('notes')?.value || '';
   const price = document.getElementById('priceAmount').textContent;
-  const therapist_fee = calculateTherapistFee(date, time, duration);
+  const therapist_fee = 0;
   // Get customer_id and booking_id if available
   const customer_id = window.lastBookingCustomerId || '';
   const booking_id = window.lastBookingId || '';
@@ -1418,6 +1419,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const lng = addressInput.dataset.lng ? Number(addressInput.dataset.lng) : null;
         const serviceId = document.getElementById('service').value;
         const duration = document.getElementById('duration').value;
+        console.log('DEBUG: Duration value retrieved:', duration, 'Type:', typeof duration);
         const genderPref = document.querySelector('input[name="genderPref"]:checked')?.value;
         const fallbackOption = document.querySelector('input[name="fallbackOption"]:checked')?.value;
         const date = document.getElementById('date').value;
@@ -1436,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const price = document.getElementById('priceAmount').textContent ? parseFloat(document.getElementById('priceAmount').textContent) : null;
         
         // Calculate therapist fee
-        const therapist_fee = calculateTherapistFee(date, time, duration);
+        const therapist_fee = 0;
         
         // Compose booking_time as ISO string
         const booking_time = date && time ? `${date}T${time}:00` : null;
