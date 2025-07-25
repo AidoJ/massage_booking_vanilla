@@ -31,4 +31,26 @@ supabaseClientContent = supabaseClientContent.replace(
 
 fs.writeFileSync(supabaseClientPath, supabaseClientContent);
 
+// Update emailService.js with environment variables
+const emailServicePath = path.join(__dirname, 'js', 'emailService.js');
+let emailServiceContent = fs.readFileSync(emailServicePath, 'utf8');
+
+// Replace hardcoded EmailJS values with environment variables
+emailServiceContent = emailServiceContent.replace(
+  /let EMAILJS_SERVICE_ID = '[^']*'/,
+  `let EMAILJS_SERVICE_ID = '${envVars.EMAILJS_SERVICE_ID || 'service_puww2kb'}'`
+);
+
+emailServiceContent = emailServiceContent.replace(
+  /let EMAILJS_TEMPLATE_ID = '[^']*'/,
+  `let EMAILJS_TEMPLATE_ID = '${envVars.EMAILJS_TEMPLATE_ID || 'template_zqjm4om'}'`
+);
+
+emailServiceContent = emailServiceContent.replace(
+  /let EMAILJS_PUBLIC_KEY = '[^']*'/,
+  `let EMAILJS_PUBLIC_KEY = '${envVars.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN'}'`
+);
+
+fs.writeFileSync(emailServicePath, emailServiceContent);
+
 console.log('✅ Environment variables injected successfully!'); 

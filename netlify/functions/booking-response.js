@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // EmailJS configuration
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || 'service_puww2kb';
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || 'template_zqjm4om';
-const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'V8qq2pjH8vfh3a6q3';
+const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
 
 exports.handler = async (event, context) => {
   // Enable CORS
