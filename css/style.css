@@ -1,114 +1,116 @@
+/* ===== VANILLA V1 - MOBILE-FIRST DESIGN ===== */
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   margin: 0;
-  padding: 20px;
-  background: #007e8c;
+  padding: 0;
+  background: linear-gradient(135deg, #007e8c 0%, #005a7a 100%);
   min-height: 100vh;
   color: #333;
+  line-height: 1.6;
+  font-size: 16px;
 }
 
 #container {
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
   background: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  overflow: hidden;
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
 
+/* Header */
 h1 {
   text-align: center;
   color: #00729B;
   margin: 0;
-  padding: 30px 20px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 20px 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-bottom: 1px solid #e0e0e0;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
-/* Progress Bar */
+/* Progress Bar - Mobile Optimized */
 .progress-container {
   width: 100%;
-  margin: 0 auto 40px auto;
-  padding: 0 24px;
-  background: transparent;
+  padding: 16px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-x: auto;
 }
+
 .progress-bar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   position: relative;
-  width: 100%;
-  min-height: 100px;
-  margin: 0 auto;
+  min-width: 600px;
+  min-height: 70px;
 }
+
 .progress-bar::before {
   content: '';
   position: absolute;
-  top: 38px;
-  left: 0;
-  right: 0;
-  height: 4px;
+  top: 25px;
+  left: 20px;
+  right: 20px;
+  height: 3px;
   background: #e0e0e0;
   z-index: 0;
 }
+
 .progress-step {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   z-index: 1;
-  flex: 1 1 0;
-  min-width: 60px;
+  flex: 1;
+  min-width: 50px;
 }
-.progress-step:first-child {
-  margin-left: 16px;
-}
-.progress-step:last-child {
-  margin-right: 16px;
-}
+
 .progress-step .bubble {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #007e8c;
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,126,140,0.08);
   border: 2px solid #007e8c;
-  transition: background 0.2s, color 0.2s, border 0.2s;
-  margin-bottom: 10px;
-  margin-top: 0;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
 }
+
 .progress-step.active .bubble {
   background: #fff;
   color: #007e8c;
   border: 2px solid #007e8c;
+  box-shadow: 0 0 0 3px rgba(0, 126, 140, 0.2);
 }
-.progress-step.completed {
-  background: #28a745;
-  color: white;
-}
+
 .progress-step .progress-label {
-  display: block;
-  font-size: 0.92rem;
+  font-size: 0.7rem;
   color: #007e8c;
-  margin-top: 8px;
   font-weight: 600;
-  letter-spacing: 0.01em;
   text-align: center;
   line-height: 1.2;
-  background: transparent;
-  min-height: 20px;
+  max-width: 60px;
 }
 
 /* Step Structure */
 .step {
   display: none;
-  padding: 0;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .step.active {
@@ -117,46 +119,29 @@ h1 {
 
 .step-header {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 30px 40px 20px;
+  padding: 20px 16px;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .step-header h2 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: #00729B;
-  font-size: 24px;
+  font-size: 1.4rem;
   font-weight: 600;
 }
 
 .step-description {
   margin: 0;
   color: #666;
-  font-size: 16px;
+  font-size: 0.95rem;
   line-height: 1.5;
 }
 
 .step-content {
-  padding: 30px 40px;
+  padding: 20px 16px;
 }
 
-/* Form Elements */
-input, select {
-  width: 100%;
-  padding: 15px;
-  margin: 10px 0;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 0.3s ease;
-  box-sizing: border-box;
-}
-
-input:focus, select:focus {
-  outline: none;
-  border-color: #00729B;
-  box-shadow: 0 0 0 3px rgba(0, 112, 155, 0.1);
-}
-
+/* Form Elements - Mobile Optimized */
 .form-group {
   margin-bottom: 20px;
 }
@@ -166,31 +151,179 @@ input:focus, select:focus {
   margin-bottom: 8px;
   font-weight: 600;
   color: #333;
+  font-size: 0.95rem;
 }
 
-/* Button Styles */
-.btn {
-  padding: 12px 24px;
-  border: none;
+input, select, textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-size: 16px;
+  transition: all 0.3s ease;
+  background: #fff;
+  font-family: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #00729B;
+  box-shadow: 0 0 0 3px rgba(0, 112, 155, 0.1);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Horizontal Form Groups - Mobile Responsive */
+.form-group.horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.form-group.horizontal > div {
+  width: 100%;
+}
+
+.form-group.horizontal label {
+  margin-bottom: 6px;
+}
+
+/* Radio Groups - Mobile Optimized */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.radio-group.horizontal {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radio-inline {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.radio-inline:hover {
+  border-color: #00729B;
+  background: #f0f8ff;
+}
+
+.radio-inline input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  accent-color: #00729B;
+}
+
+.radio-inline:has(input[type="radio"]:checked) {
+  border-color: #00729B;
+  background: #f0f8ff;
+}
+
+/* Custom Radio for Booking Type */
+.booking-type-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.custom-radio {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+}
+
+.custom-radio:hover {
+  border-color: #00729B;
+  background: #f0f8ff;
+}
+
+.custom-radio input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #00729B;
+  border-radius: 50%;
+  margin-right: 12px;
+  position: relative;
+  background: #fff;
+  transition: all 0.3s ease;
+}
+
+.custom-radio input:checked ~ .checkmark {
+  background: #00729B;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  top: 4px;
+  left: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+}
+
+.custom-radio input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Buttons - Mobile Optimized */
+.btn {
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
   display: inline-block;
-  margin: 5px;
+  text-align: center;
+  min-height: 48px;
+  margin: 8px 0;
 }
 
 .btn.primary {
   background: #00729B;
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 .btn.primary:hover {
   background: #005a7a;
-  color: #ffffff !important;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 112, 155, 0.3);
 }
 
@@ -213,368 +346,55 @@ input:focus, select:focus {
 
 .button-group {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 30px;
-  gap: 15px;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.button-group .btn {
-  flex: 1;
-  text-align: center;
-}
-
-/* Price Display */
+/* Price Display - Mobile Optimized */
 .price-display {
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  padding: 20px;
-  border-radius: 10px;
+  padding: 16px;
+  border-radius: 8px;
   text-align: center;
   margin: 20px 0;
   border: 2px solid #2196f3;
 }
 
 .price-display strong {
-  font-size: 20px;
+  font-size: 1.2rem;
   color: #1976d2;
+  display: block;
+  margin-bottom: 8px;
 }
 
 .price-breakdown {
-  font-size: 14px;
-  margin-top: 10px;
+  font-size: 0.9rem;
   color: #666;
   line-height: 1.4;
+  text-align: left;
 }
 
-/* Booking Summary */
-.booking-summary {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  border-left: 4px solid #00729B;
+/* Time Slots - Mobile Optimized */
+#timeSlotsContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
 }
 
-.booking-summary h3 {
-  margin-top: 0;
-  color: #00729B;
-}
-
-.booking-summary p {
-  margin: 8px 0;
-  line-height: 1.5;
-}
-
-/* Card Element */
-.card-element {
-  background: white;
-  padding: 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  margin: 20px 0;
-  max-width: 400px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Therapist Status */
-.therapist-status {
-  background: #fff3cd;
-  padding: 20px;
-  border-radius: 10px;
-  margin: 20px 0;
-  border-left: 4px solid #ffc107;
-}
-
-.therapist-status p {
-  margin: 8px 0;
-  font-size: 16px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  body {
-    padding: 10px;
-  }
-  
-  #container {
-    margin: 0;
-    border-radius: 10px;
-  }
-  
-  .step-header {
-    padding: 20px;
-  }
-  
-  .step-content {
-    padding: 20px;
-  }
-  
-  .step-header h2 {
-    font-size: 20px;
-  }
-  
-  .button-group {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .button-group .btn {
-    width: 100%;
-    margin: 0;
-  }
-  
-  /* Enhanced progress bar for mobile */
-  .progress-container {
-    padding: 0 10px;
-    margin-bottom: 20px;
-  }
-  
-  .progress-bar {
-    min-height: 80px;
-  }
-  
-  .progress-step {
-    min-width: 40px;
-  }
-  
-  .progress-step .bubble {
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
-    margin-bottom: 8px;
-  }
-  
-  .progress-step .progress-label {
-    font-size: 0.75rem;
-    text-align: center;
-    line-height: 1.2;
-    margin-top: 4px;
-  }
-  
-  /* Enhanced form fields for mobile */
-  input, select, textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
-    padding: 12px 15px;
-    margin-bottom: 15px;
-  }
-  
-  /* Enhanced horizontal form groups for mobile */
-  .form-group.horizontal {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .form-group.horizontal > div {
-    width: 100%;
-    margin-right: 0;
-  }
-  
-  .form-group.horizontal label {
-    text-align: left;
-    min-width: 0;
-    margin-bottom: 6px;
-    font-size: 0.95rem;
-  }
-  
-  .form-group.horizontal input,
-  .form-group.horizontal textarea {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-  }
-  
-  /* Enhanced radio groups for mobile */
-  .radio-group {
-    gap: 12px;
-    margin-bottom: 15px;
-  }
-  
-  .radio-group.horizontal {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-  
-  .radio-group.horizontal .radio-inline {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 12px 16px;
-    margin-right: 0;
-  }
-  
-  .radio-inline {
-    padding: 12px 16px;
-    font-size: 0.95rem;
-  }
-  
-  /* Enhanced time slots for mobile */
-  .time-slot-btn {
-    width: calc(50% - 5px);
-    margin: 2px;
-    padding: 12px 8px;
-    font-size: 0.9rem;
-  }
-  
-  /* Enhanced therapist selection for mobile */
-  .therapist-card {
-    padding: 15px;
-    margin-bottom: 10px;
-  }
-  
-  .therapist-radio-label {
-    padding: 12px;
-    gap: 10px;
-  }
-  
-  .therapist-radio-custom {
-    width: 20px;
-    height: 20px;
-    margin: 0;
-  }
-  
-  /* Enhanced customer details for mobile */
-  #customerLookupResult {
-    margin: 15px 0;
-    padding: 15px;
-  }
-  
-  #registrationOption {
-    margin: 15px 0;
-  }
-  
-  #customerCodeDisplay {
-    margin: 15px 0;
-    padding: 15px;
-  }
-  
-  /* Enhanced booking summary for mobile */
-  .booking-summary {
-    padding: 15px;
-  }
-  
-  .booking-summary p {
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-  }
-  
-  /* Enhanced price display for mobile */
-  .price-display {
-    padding: 15px;
-    margin: 15px 0;
-  }
-  
-  /* Enhanced card element for mobile */
-  .card-element {
-    padding: 15px;
-    margin: 15px 0;
-  }
-  
-  /* Better spacing for all form elements */
-  .form-group {
-    margin-bottom: 20px;
-  }
-  
-  .form-group label {
-    margin-bottom: 8px;
-    font-size: 0.95rem;
-  }
-  
-  /* Enhanced error messages for mobile */
-  .error-message {
-    font-size: 0.85rem;
-    padding: 8px 12px;
-    margin-top: 5px;
-  }
-  
-  /* Enhanced status messages for mobile */
-  #emailStatus, #address-autocomplete-status, #gender-availability-status {
-    font-size: 0.85rem;
-    margin-top: 8px;
-    padding: 8px 12px;
-  }
-  
-  /* Enhanced spinner for mobile */
-  .spinner-container {
-    text-align: center;
-    padding: 20px;
-  }
-  
-  /* Better touch targets */
-  .btn {
-    min-height: 44px;
-    padding: 12px 20px;
-  }
-  
-  input[type="radio"], input[type="checkbox"] {
-    min-width: 20px;
-    min-height: 20px;
-  }
-  
-  /* Time slots container mobile improvements */
-  #timeSlotsContainer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin: 15px 0;
-  }
-  
-  /* Therapist selection container mobile improvements */
-  #therapistSelection {
-    margin: 15px 0;
-  }
-  
-  /* Customer details form mobile improvements */
-  #step6 .step-content {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  /* Booking type wrapper mobile improvements */
-  .booking-type-wrapper {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .booking-type-wrapper .custom-radio {
-    width: 100%;
-    margin-bottom: 10px;
-  }
-  
-  /* Business name group mobile improvements */
-  #businessNameGroup {
-    margin: 15px 0;
-  }
-  
-  /* Notes textarea mobile improvements */
-  #notes {
-    min-height: 100px;
-    margin: 15px 0;
-  }
-  
-  /* Room number and booker name mobile improvements */
-  #roomNumber, #bookerName {
-    margin: 15px 0;
-  }
-}
-
-/* Time slot button styles */
 .time-slot-btn {
   background: #f8f9fa;
   border: 2px solid #e9ecef;
   border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 1rem;
+  padding: 12px 8px;
+  font-size: 0.9rem;
   font-weight: 500;
   color: #495057;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin: 2px;
-  min-width: 80px;
   text-align: center;
+  min-height: 44px;
 }
 
 .time-slot-btn:hover {
@@ -596,7 +416,171 @@ input:focus, select:focus {
   cursor: not-allowed;
 }
 
-/* Spinner container styles */
+/* Therapist Selection - Mobile Optimized */
+#therapistSelection {
+  margin: 16px 0;
+}
+
+.therapist-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fff;
+}
+
+.therapist-card:hover {
+  border-color: #00729B;
+  box-shadow: 0 2px 8px rgba(0, 112, 155, 0.1);
+}
+
+.therapist-card.selected {
+  border-color: #00729B;
+  background: #f0f8ff;
+}
+
+.therapist-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.therapist-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.therapist-name {
+  font-weight: 600;
+  color: #00729B;
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+}
+
+.therapist-bio {
+  color: #666;
+  margin: 0 0 6px 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.therapist-experience {
+  color: #888;
+  font-size: 0.8rem;
+  margin: 0 0 4px 0;
+}
+
+.therapist-specialties {
+  color: #00729B;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.therapist-distance {
+  color: #00729B;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 4px 0 0 0;
+  background: #f0f8ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Customer Details - Mobile Optimized */
+#customerLookupResult {
+  background: #e8f5e8;
+  border: 1px solid #4caf50;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+#customerLookupResult div:first-child {
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 8px;
+}
+
+#registrationOption {
+  margin: 16px 0;
+}
+
+#customerCodeDisplay {
+  background: #f0f8ff;
+  border: 1px solid #007e8c;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+#customerCodeDisplay div:first-child {
+  font-weight: 600;
+  color: #007e8c;
+  margin-bottom: 8px;
+}
+
+#customerCodeText {
+  font-family: monospace;
+  font-size: 1rem;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Booking Summary - Mobile Optimized */
+.booking-summary {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #00729B;
+}
+
+.booking-summary h3 {
+  margin: 0 0 16px 0;
+  color: #00729B;
+  font-size: 1.2rem;
+}
+
+.booking-summary p {
+  margin: 8px 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+/* Card Element - Mobile Optimized */
+.card-element {
+  background: white;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  margin: 16px 0;
+  width: 100%;
+}
+
+/* Status Messages - Mobile Optimized */
+#emailStatus, #address-autocomplete-status, #gender-availability-status {
+  font-size: 0.85rem;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+/* Spinner - Mobile Optimized */
 .spinner-container {
   display: flex;
   justify-content: center;
@@ -606,6 +590,7 @@ input:focus, select:focus {
 
 .egg-timer {
   animation: spin 1.2s linear infinite;
+  font-size: 2rem;
 }
 
 @keyframes spin {
@@ -613,59 +598,7 @@ input:focus, select:focus {
   to { transform: rotate(360deg); }
 }
 
-/* Additional mobile improvements for very small screens */
-@media (max-width: 480px) {
-  body {
-    padding: 5px;
-  }
-  
-  .step-header {
-    padding: 15px;
-  }
-  
-  .step-content {
-    padding: 15px;
-  }
-  
-  .step-header h2 {
-    font-size: 18px;
-  }
-  
-  .progress-step .bubble {
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
-  }
-  
-  .progress-step .progress-label {
-    font-size: 0.7rem;
-  }
-  
-  .time-slot-btn {
-    width: 100%;
-    margin: 2px 0;
-  }
-  
-  .radio-inline {
-    padding: 10px 12px;
-    font-size: 0.9rem;
-  }
-  
-  input, select, textarea {
-    padding: 10px 12px;
-  }
-  
-  .btn {
-    padding: 10px 16px;
-    font-size: 0.9rem;
-  }
-}
-
-/* Animation for step transitions */
-.step {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
+/* Fade In Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -675,6 +608,139 @@ input:focus, select:focus {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Tablet Styles */
+@media (min-width: 768px) {
+  #container {
+    max-width: 800px;
+    margin: 20px auto;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    min-height: auto;
+  }
+  
+  body {
+    padding: 20px;
+  }
+  
+  .step-header {
+    padding: 30px 40px 20px;
+  }
+  
+  .step-content {
+    padding: 30px 40px;
+  }
+  
+  .step-header h2 {
+    font-size: 1.6rem;
+  }
+  
+  .button-group {
+    flex-direction: row;
+    gap: 16px;
+  }
+  
+  .btn {
+    width: auto;
+    flex: 1;
+  }
+  
+  .form-group.horizontal {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .form-group.horizontal label {
+    min-width: 140px;
+    margin-bottom: 0;
+  }
+  
+  .form-group.horizontal input,
+  .form-group.horizontal textarea {
+    flex: 1;
+    max-width: none;
+  }
+  
+  .radio-group.horizontal {
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  .booking-type-wrapper {
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  #timeSlotsContainer {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+  
+  .progress-container {
+    padding: 20px 24px;
+  }
+  
+  .progress-bar {
+    min-width: 700px;
+    min-height: 80px;
+  }
+  
+  .progress-step .bubble {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+  
+  .progress-step .progress-label {
+    font-size: 0.8rem;
+    max-width: 80px;
+  }
+}
+
+/* Desktop Styles */
+@media (min-width: 1024px) {
+  .step-header {
+    padding: 40px 50px 25px;
+  }
+  
+  .step-content {
+    padding: 40px 50px;
+  }
+  
+  .step-header h2 {
+    font-size: 1.8rem;
+  }
+  
+  .form-group.horizontal label {
+    min-width: 160px;
+  }
+  
+  #timeSlotsContainer {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  
+  .progress-bar {
+    min-width: 800px;
+    min-height: 90px;
+  }
+  
+  .progress-step .bubble {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+  
+  .progress-step .progress-label {
+    font-size: 0.85rem;
+    max-width: 90px;
+  }
+}
+
+/* Hide any input fields in the Payment step except for Stripe's iframe */
+#step8 input {
+  display: none !important;
 }
 
 /* Debug button styling */
@@ -693,391 +759,47 @@ input:focus, select:focus {
   background: #005a7a;
 }
 
-.radio-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  margin-bottom: 8px;
-}
-.radio-inline {
-  display: flex;
-  align-items: center;
-  font-size: 1em;
-  background: #f6f7fb;
-  border-radius: 20px;
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  transition: border 0.2s;
-}
-.radio-inline input[type="radio"] {
-  margin-right: 8px;
-}
-.radio-inline:has(input[type="radio"]:checked) {
-  border: 2px solid #764ba2;
-  background: #ede7f6;
-}
-
-#notes {
-  font-family: Arial, sans-serif;
-}
-
-/* Service Details Styles */
-.service-details {
-  margin: 20px 0;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
-}
-
-.service-card {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.service-image {
-  text-align: center;
-}
-
-.service-image img {
-  max-width: 100%;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.service-info h3 {
-  margin: 0 0 10px 0;
-  color: #00729B;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.service-info p {
-  margin: 0;
-  color: #666;
-  line-height: 1.6;
-  font-size: 14px;
-}
-
-/* Therapist Card Styles */
-.therapist-card {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.therapist-card:hover {
-  border-color: #00729B;
-  box-shadow: 0 4px 12px rgba(0, 112, 155, 0.1);
-}
-
-.therapist-card.selected {
-  border-color: #00729B;
-  background: #f0f8ff;
-}
-
-.therapist-photo {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #e9ecef;
-}
-
-.therapist-info {
-  flex: 1;
-}
-
-.therapist-name {
-  font-weight: 600;
-  color: #00729B;
-  margin: 0 0 5px 0;
-  font-size: 18px;
-}
-
-.therapist-bio {
-  color: #666;
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.therapist-experience {
-  color: #888;
-  font-size: 12px;
-  margin: 0;
-}
-
-.therapist-specialties {
-  color: #00729B;
-  font-size: 12px;
-  font-weight: 500;
-  margin: 5px 0 0 0;
-}
-
-.therapist-distance {
-  color: #00729B;
-  font-size: 12px;
-  font-weight: 600;
-  margin: 5px 0 0 0;
-  background: #f0f8ff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-button.btn.btn-availability, .btn-availability {
-    background-color: #FFA940 !important;
-    color: #fff !important;
-    border: 1px solid #e6b800 !important;
-    font-weight: bold !important;
-    box-shadow: 0 2px 8px rgba(255,169,64,0.15) !important;
-} 
-
-/* Horizontal form group: left-align labels, right-align inputs, consistent width */
-.form-group.horizontal {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 20px;
-}
-.form-group.horizontal label {
-  min-width: 160px;
-  margin-bottom: 0;
-  text-align: left;
-  font-weight: 600;
-}
-.form-group.horizontal input,
-.form-group.horizontal textarea {
-  flex: 0 0 320px;
-  max-width: 320px;
-  width: 320px;
-  margin: 0 0 0 auto;
-  display: block;
-  box-sizing: border-box;
-}
-.form-group.horizontal textarea {
-  align-self: center;
-  min-height: 48px;
-}
-@media (max-width: 768px) {
-  .form-group.horizontal {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-  }
-  .form-group.horizontal label {
-    text-align: left;
-    min-width: 0;
-  }
-  .form-group.horizontal input,
-  .form-group.horizontal textarea {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-  }
-}
-
-/* Consistent textarea styling */
-textarea {
-  width: 100%;
-  padding: 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 0.3s ease;
-  box-sizing: border-box;
-  resize: vertical;
-  font-family: inherit;
-}
-textarea:focus {
-  outline: none;
-  border-color: #00729B;
-  box-shadow: 0 0 0 3px rgba(0, 112, 155, 0.1);
-}
-
-/* Therapist selection consistency */
-#therapistSelection {
-  margin-bottom: 20px;
-}
-
-/* Therapist radio label alignment */
-.therapist-radio-label {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-}
-.therapist-radio-label input[type="radio"] {
-  margin: 0;
-}
-
-/* Therapist radio button custom size */
-.therapist-radio-custom {
-  width: 22px;
-  height: 32px;
-  accent-color: #00729B;
-  margin: 0 0 0 18px;
-  display: inline-block;
-} 
-
-/* Hide any input fields in the Payment step except for Stripe's iframe */
-#step8 input {
-  display: none !important;
-} 
-
-.radio-group.horizontal {
-  display: flex;
-  flex-direction: row;
-  gap: 24px;
-  align-items: center;
-}
-.radio-group.horizontal .radio-inline {
-  display: flex;
-  align-items: center;
-  font-weight: 400;
-  margin-right: 12px;
-  gap: 10px;
-}
-.radio-group.horizontal .radio-inline input[type="radio"] {
-  width: 22px;
-  height: 22px;
-  accent-color: #007e8c;
-  margin-left: 8px;
-  margin-right: 0;
-  order: 2;
-}
-.radio-group.horizontal .radio-inline span {
-  order: 1;
-}
-
-.radio-group.vertical {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-.radio-group.vertical .radio-inline {
-  display: flex;
-  align-items: center;
-  font-weight: 400;
-  margin-right: 0;
-  gap: 6px;
-}
-.radio-group.vertical .radio-inline input[type="radio"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #007e8c;
-  margin-left: 6px;
-  margin-right: 0;
-  order: 2;
-}
-.radio-group.vertical .radio-inline span {
-  order: 1;
-}
-
-.progress-label {
-  display: block;
-  font-size: 0.75rem;
-  color: #555;
-  margin-top: 2px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-} 
-
-/* Clean custom radio button style for Booking Type */
-.booking-type-wrapper {
-  background: #fff !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-  color: #007e8c !important;
-  box-shadow: none !important;
-}
-.booking-type-wrapper .custom-radio {
-  display: block !important;
-  position: relative !important;
-  padding-left: 38px !important;
-  margin-bottom: 23px !important;
-  cursor: pointer !important;
-  font-size: 1.1rem !important;
-  color: #007e8c !important;
-  user-select: none !important;
-  font-weight: 500 !important;
-  background: #fff !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-.booking-type-wrapper .custom-radio:last-child {
-  margin-bottom: 0 !important;
-}
-.booking-type-wrapper .custom-radio input {
-  position: absolute !important;
-  opacity: 0 !important;
-  cursor: pointer !important;
-  height: 0 !important;
-  width: 0 !important;
-}
-.booking-type-wrapper .checkmark {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  height: 25px !important;
-  width: 25px !important;
-  background-color: #eee !important;
-  border-radius: 50% !important;
-  border: 2px solid #007e8c !important;
-  transition: background 0.2s, border 0.2s !important;
-}
-.booking-type-wrapper .custom-radio:hover input ~ .checkmark {
-  background-color: #d6f3f6 !important;
-}
-.booking-type-wrapper .custom-radio input:checked ~ .checkmark {
-  background-color: #007e8c !important;
-  border: 2px solid #007e8c !important;
-}
-.booking-type-wrapper .checkmark:after {
-  content: "";
-  position: absolute !important;
-  display: none !important;
-}
-.booking-type-wrapper .custom-radio input:checked ~ .checkmark:after {
-  display: block !important;
-}
-.booking-type-wrapper .custom-radio .checkmark:after {
-  top: 7px !important;
-  left: 7px !important;
-  width: 9px !important;
-  height: 9px !important;
-  border-radius: 50% !important;
-  background: white !important;
-} 
-
+/* Business name group specific styling */
 #businessNameGroup {
-  margin-left: 0 !important;
-  padding-left: 38px !important;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  margin: 16px 0;
 }
-#businessNameGroup label {
-  margin-bottom: 6px;
-}
+
 #businessName {
   width: 100%;
-  max-width: 320px;
-  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Notes specific styling */
+#notes {
+  min-height: 120px;
+}
+
+/* Room number and booker name specific styling */
+#roomNumber, #bookerName {
+  margin: 16px 0;
+}
+
+/* Address input specific styling */
+#address {
+  margin: 16px 0;
+}
+
+/* Service and duration selects specific styling */
+#service, #duration {
+  margin: 16px 0;
+}
+
+/* Date input specific styling */
+#date {
+  margin: 16px 0;
+}
+
+/* Parking select specific styling */
+#parking {
+  margin: 16px 0;
+}
+
+/* Customer email, phone, name fields specific styling */
+#customerEmail, #customerPhone, #customerFirstName, #customerLastName {
+  margin: 16px 0;
 } 
