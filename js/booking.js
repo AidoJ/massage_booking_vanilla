@@ -350,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const opt = document.createElement('option');
             opt.value = duration.duration_minutes;
             opt.textContent = `${duration.duration_minutes} minutes`;
-            console.log('DEBUG: Creating duration option with value:', duration.duration_minutes, 'ID:', duration.id);
             durationSelect.appendChild(opt);
           });
         } else {
@@ -1069,9 +1068,15 @@ function observeStep8Mount() {
 observeStep8Mount();
 
 // Populate booking summary in Step 9
-function populateBookingSummary() {
+async function populateBookingSummary() {
   const summaryDiv = document.getElementById('bookingSummaryDetails');
   if (!summaryDiv) return;
+  
+  // Generate booking ID if not already generated
+  if (!window.lastBookingId) {
+    window.lastBookingId = await generateSequentialBookingId();
+  }
+  
   // Gather details
   const addressInput = document.getElementById('address');
   const bookingType = document.querySelector('input[name="bookingType"]:checked')?.value || null;
@@ -1129,7 +1134,9 @@ function populateBookingSummary() {
 const step9 = document.getElementById('step9');
 const observer9 = new MutationObserver(() => {
   if (step9.classList.contains('active')) {
-    populateBookingSummary();
+    populateBookingSummary().catch(error => {
+      console.error('Error populating booking summary:', error);
+    });
   }
 });
 observer9.observe(step9, { attributes: true, attributeFilter: ['class'] });
@@ -1146,24 +1153,75 @@ observer10.observe(step10, { attributes: true, attributeFilter: ['class'] });
 // Helper to generate customer_code
 async function generateCustomerCode(surname) {
   if (!surname || surname.length < 1) return null;
-  const last4 = surname.slice(-4).toLowerCase();
-  // Count existing codes with this suffix
+  
+  // Query for existing CUST codes to find the next number
   const { data: existing, error } = await window.supabase
     .from('customers')
     .select('customer_code')
-    .ilike('customer_code', `%${last4}%`);
+    .ilike('customer_code', 'CUST%');
+  
   let maxNum = 0;
   if (existing && existing.length > 0) {
     existing.forEach(row => {
-      const match = row.customer_code && row.customer_code.match(/([a-z]{1,4})(\d{4})$/);
-      if (match && match[1] === last4) {
-        const num = parseInt(match[2], 10);
+      const match = row.customer_code && row.customer_code.match(/CUST(\d{4})$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
         if (num > maxNum) maxNum = num;
       }
     });
   }
+  
   const nextNum = (maxNum + 1).toString().padStart(4, '0');
-  return `${last4}${nextNum}`;
+  return `CUST${nextNum}`;
+}
+
+// Helper to generate sequential booking ID
+async function generateSequentialBookingId() {
+  try {
+    // Get current year and month
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const yearMonth = `${year}${month}`;
+    
+    // Query for the last booking ID in the current month
+    const { data: lastBooking, error } = await window.supabase
+      .from('bookings')
+      .select('booking_id')
+      .ilike('booking_id', `RMM${yearMonth}-%`)
+      .order('booking_id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error fetching last booking ID:', error);
+      // Fallback to first booking of the month
+      return `RMM${yearMonth}-0001`;
+    }
+    
+    let nextNumber = 1;
+    
+    if (lastBooking && lastBooking.booking_id) {
+      // Extract the number from the last booking ID
+      const match = lastBooking.booking_id.match(/RMM\d{6}-(\d{4})$/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+    
+    // Format the new booking ID
+    const bookingId = `RMM${yearMonth}-${String(nextNumber).padStart(4, '0')}`;
+    console.log('Generated booking ID:', bookingId);
+    return bookingId;
+    
+  } catch (error) {
+    console.error('Error generating booking ID:', error);
+    // Fallback booking ID
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `RMM${year}${month}-0001`;
+  }
 }
 
 // Add customer registration logic
@@ -1193,19 +1251,25 @@ async function getOrCreateCustomerId(firstName, lastName, email, phone, isGuest 
   let customer_code;
   
   if (isGuest) {
-    // Generate guest code using the database function
-    const { data: guestCodeResult, error: guestCodeError } = await window.supabase
-      .rpc('generate_guest_code');
-      
-    if (guestCodeError) {
-      console.error('Error generating guest code:', guestCodeError);
-      // Fallback to manual guest code generation
-      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      customer_code = `GUEST_${date}_${random}`;
-    } else {
-      customer_code = guestCodeResult;
+    // Generate guest code using sequential numbering
+    const { data: existing, error } = await window.supabase
+      .from('customers')
+      .select('customer_code')
+      .ilike('customer_code', 'GUEST%');
+    
+    let maxNum = 0;
+    if (existing && existing.length > 0) {
+      existing.forEach(row => {
+        const match = row.customer_code && row.customer_code.match(/GUEST(\d{4})$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
     }
+    
+    const nextNum = (maxNum + 1).toString().padStart(4, '0');
+    customer_code = `GUEST${nextNum}`;
   } else {
     // Generate regular customer code based on surname
     const surname = lastName || firstName || 'CUST';
@@ -1419,7 +1483,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const lng = addressInput.dataset.lng ? Number(addressInput.dataset.lng) : null;
         const serviceId = document.getElementById('service').value;
         const duration = document.getElementById('duration').value;
-        console.log('DEBUG: Duration value retrieved:', duration, 'Type:', typeof duration);
         const genderPref = document.querySelector('input[name="genderPref"]:checked')?.value;
         const fallbackOption = document.querySelector('input[name="fallbackOption"]:checked')?.value;
         const date = document.getElementById('date').value;
@@ -1489,12 +1552,17 @@ document.addEventListener('DOMContentLoaded', function() {
           payment_status: 'pending'
         };
         
+        // Generate booking ID BEFORE inserting
+        const bookingIdFormatted = await generateSequentialBookingId();
+        window.lastBookingId = bookingIdFormatted;
+        
         if (customer_id) payload.customer_id = customer_id;
         if (window.lastCustomerCode) payload.customer_code = window.lastCustomerCode;
+        payload.booking_id = bookingIdFormatted; // Add booking ID to payload
         
         window.lastBookingCustomerId = customer_id || '';
         
-        // Insert booking into Supabase
+        // Insert booking into Supabase with booking_id already included
         const { data, error } = await window.supabase.from('bookings').insert([payload]).select();
         console.log('Supabase insert result:', { data, error });
         
@@ -1514,25 +1582,7 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
 
-        // Generate booking ID and update the record
-        const bookingId = data[0].id;
-        const bookingIdFormatted = generateBookingId(bookingId);
-        window.lastBookingId = bookingIdFormatted;
-        
-        // Update booking with the formatted booking_id and customer_code
-        const { error: updateError } = await window.supabase
-          .from('bookings')
-          .update({ 
-            booking_id: bookingIdFormatted,
-            customer_code: window.lastCustomerCode || null
-          })
-          .eq('id', bookingId);
-        
-        if (updateError) {
-          console.error('Error updating booking with IDs:', updateError);
-        } else {
-          console.log('✅ Updated booking with booking_id:', bookingIdFormatted, 'and customer_code:', window.lastCustomerCode);
-        }
+        console.log('✅ Booking created with booking_id:', bookingIdFormatted, 'and customer_code:', window.lastCustomerCode);
 
         // Send email notifications
         console.log('📧 Starting email notifications...');
