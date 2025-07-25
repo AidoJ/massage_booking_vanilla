@@ -26,7 +26,8 @@ function calculateTherapistFee(dateVal, timeVal, durationVal) {
   // Apply duration uplift percentage if available
   const duration = window.durationsCache.find(d => d.duration_minutes === Number(durationVal));
   if (duration && duration.uplift_percentage) {
-    fee += fee * (Number(duration.uplift_percentage) / 100);
+    const durationUplift = fee * (Number(duration.uplift_percentage) / 100);
+    fee += durationUplift;
   }
   
   return Math.round(fee * 100) / 100;
@@ -58,12 +59,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const steps = Array.from(document.querySelectorAll('.step'));
   const progressSteps = Array.from(document.querySelectorAll('.progress-step'));
 
-  // Disable past dates on the date picker
+  // Disable past dates on the date picker and clear any default value
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-11
   const dd = String(today.getDate()).padStart(2, '0');
-  document.getElementById('date').setAttribute('min', `${yyyy}-${mm}-${dd}`);
+  const dateInput = document.getElementById('date');
+  dateInput.setAttribute('min', `${yyyy}-${mm}-${dd}`);
+  dateInput.value = ''; // Clear any default value
 
   // Initial state: show only the first step
   showStep('step1');
@@ -502,14 +505,13 @@ console.log('Globals:', {
     // Get base price
     const service = window.servicesCache.find(s => s.id === serviceId);
     if (!service) return;
-    let basePrice = Number(service.service_base_price);
-    let price = basePrice;
-    let breakdown = [`Base Price: $${basePrice.toFixed(2)}`];
+    let price = Number(service.service_base_price);
+    let breakdown = [`Base Price: $${price.toFixed(2)}`];
 
     // Get duration uplift
     const duration = window.durationsCache.find(d => d.duration_minutes === Number(durationVal));
     if (duration && duration.uplift_percentage) {
-      const durationUplift = basePrice * (Number(duration.uplift_percentage) / 100);
+      const durationUplift = price * (Number(duration.uplift_percentage) / 100);
       price += durationUplift;
       breakdown.push(`Duration Uplift (${duration.uplift_percentage}%): +$${durationUplift.toFixed(2)}`);
     }
@@ -527,7 +529,7 @@ console.log('Globals:', {
       }
     }
     if (timeUplift) {
-      const timeUpliftAmount = basePrice * (timeUplift / 100);
+      const timeUpliftAmount = price * (timeUplift / 100);
       price += timeUpliftAmount;
       breakdown.push(`Time Uplift (${timeUplift}%): +$${timeUpliftAmount.toFixed(2)}`);
     }
@@ -1458,7 +1460,7 @@ async function sendBookingNotifications(bookingData, bookingId) {
       therapist_name: bookingData.therapist_name || 'Available Therapist',
       booking_date: bookingData.booking_date || new Date().toISOString().split('T')[0],
       booking_time: bookingData.booking_time || '09:00',
-      total_price: bookingData.price ? `$${bookingData.price.toFixed(2)}` : '$159.00'
+              total_price: bookingData.price ? `$${bookingData.price.toFixed(2)}` : 'N/A'
     };
     
     // Send email notification

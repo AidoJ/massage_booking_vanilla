@@ -56,7 +56,7 @@ Thank you for choosing Rejuvenators Mobile Massage!`,
         room_number: bookingData.room_number || '123',
         booker_name: bookingData.booker_name || 'Aidan Test',
         notes: bookingData.notes || 'Access via lift 2, ive got a bad back ache',
-        total_price: bookingData.total_price || '$159.00',
+        total_price: bookingData.total_price || 'N/A',
         email_type: 'booking_request_received'
       };
 
