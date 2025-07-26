@@ -1023,11 +1023,11 @@ async function updateTherapistSelection() {
     card.className = 'therapist-card';
     card.dataset.therapistId = t.id;
     
-    const photoUrl = profileData?.profile_pic || 'https://via.placeholder.com/50x50/007e8c/ffffff?text=' + t.first_name.charAt(0);
+    const photoUrl = profileData?.profile_pic || '';
     const bio = profileData?.bio || 'No bio available';
     
     card.innerHTML = `
-      <img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo" onerror="this.src='https://via.placeholder.com/50x50/007e8c/ffffff?text=${t.first_name.charAt(0)}'">
+      <img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo" onerror="this.style.display='none'">
       <div class="therapist-info">
         <div class="therapist-name">
           <span>${t.first_name} ${t.last_name}</span>
