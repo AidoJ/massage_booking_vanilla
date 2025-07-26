@@ -20,6 +20,7 @@ const EmailService = {
     try {
       // Send all required parameters for the new template
       const templateParams = {
+        to_email: bookingData.customer_email, // This is the recipient email EmailJS needs
         customer_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
         customer_email: bookingData.customer_email,
         booking_id: bookingData.booking_id,
