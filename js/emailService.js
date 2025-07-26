@@ -35,25 +35,28 @@ const EmailService = {
     }
     
     try {
-      // Pass through all data exactly as received from booking form
+      // Send parameters that match the template variables exactly
       const templateParams = {
         to_email: bookingData.customer_email,
+        to_name: bookingData.customer_name,
         customer_name: bookingData.customer_name,
         customer_email: bookingData.customer_email,
+        customer_code: bookingData.customer_code || 'N/A',
         booking_id: bookingData.booking_id,
-        service_name: bookingData.service_name,
-        duration_minutes: bookingData.duration_minutes,
-        booking_date: bookingData.booking_date,
-        booking_time: bookingData.booking_time,
+        service: bookingData.service_name,
+        duration: bookingData.duration_minutes + ' minutes',
+        date_time: bookingData.booking_date + ' at ' + bookingData.booking_time,
         address: bookingData.address,
-        business_name: bookingData.business_name,
-        room_number: bookingData.room_number,
-        gender_preference: bookingData.gender_preference,
-        therapist_name: bookingData.therapist_name,
-        parking: bookingData.parking,
-        booker_name: bookingData.booker_name,
-        notes: bookingData.notes,
-        total_price: bookingData.total_price
+        business_name: bookingData.business_name || '',
+        room_number: bookingData.room_number || '',
+        gender_preference: bookingData.gender_preference || 'No preference',
+        therapist: bookingData.therapist_name || 'Available Therapist',
+        parking: bookingData.parking || 'N/A',
+        booker_name: bookingData.booker_name || '',
+        notes: bookingData.notes || '',
+        estimated_price: bookingData.total_price || 'N/A',
+        base_price: bookingData.base_price || bookingData.total_price || 'N/A',
+        therapist_fee: bookingData.therapist_fee || 'N/A'
       };
 
       console.log('📧 Template parameters:', templateParams);
