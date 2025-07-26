@@ -982,23 +982,12 @@ async function updateTherapistSelection() {
   therapistSelectionDiv.innerHTML = '';
   if (!serviceId || !durationVal || !dateVal || !timeVal || !genderVal) return;
 
-  // Get all therapists who match service and gender with bio and profile_pic
+  // Get all therapists who match service and gender
   const { data: therapistLinks } = await window.supabase
     .from('therapist_services')
-    .select(`
-      therapist_id, 
-      therapist_profiles!therapist_id (
-        id, 
-        first_name, 
-        last_name, 
-        gender, 
-        is_active,
-        bio,
-        profile_pic
-      )
-    `)
+    .select('therapist_id, therapist:therapist_id (id, first_name, last_name, gender, is_active)')
     .eq('service_id', serviceId);
-  let therapists = (therapistLinks || []).map(row => row.therapist_profiles).filter(t => t && t.is_active);
+  let therapists = (therapistLinks || []).map(row => row.therapist).filter(t => t && t.is_active);
   if (genderVal !== 'any') therapists = therapists.filter(t => t.gender === genderVal);
 
   // Deduplicate therapists by id (fix for triplicates)
@@ -1022,13 +1011,20 @@ async function updateTherapistSelection() {
   }
 
   // Render therapists as cards with images and bios
-  availableTherapists.forEach(t => {
+  availableTherapists.forEach(async (t) => {
+    // Get bio and profile_pic from therapist_profiles table
+    const { data: profileData } = await window.supabase
+      .from('therapist_profiles')
+      .select('bio, profile_pic')
+      .eq('id', t.id)
+      .single();
+    
     const card = document.createElement('div');
     card.className = 'therapist-card';
     card.dataset.therapistId = t.id;
     
-    const photoUrl = t.profile_pic || 'https://via.placeholder.com/50x50/007e8c/ffffff?text=' + t.first_name.charAt(0);
-    const bio = t.bio || 'No bio available';
+    const photoUrl = profileData?.profile_pic || 'https://via.placeholder.com/50x50/007e8c/ffffff?text=' + t.first_name.charAt(0);
+    const bio = profileData?.bio || 'No bio available';
     
     card.innerHTML = `
       <img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo" onerror="this.src='https://via.placeholder.com/50x50/007e8c/ffffff?text=${t.first_name.charAt(0)}'">
