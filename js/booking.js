@@ -1091,26 +1091,15 @@ async function toggleTherapistBio(therapistId) {
     bio.classList.remove('expanded');
     readMoreBtn.textContent = 'Read More';
   } else {
-    // Expand - fetch bio and picture
+    // Expand - fetch bio only
     try {
       const { data: therapistData } = await window.supabase
         .from('therapist_profiles')
-        .select('bio, profile_pic')
+        .select('bio')
         .eq('id', therapistId)
         .single();
       
-      const photoUrl = therapistData?.profile_pic || null;
       const bioText = therapistData?.bio || 'No bio available';
-      
-      // Add photo if it doesn't exist
-      let photo = card.querySelector('.therapist-photo');
-      if (!photo && photoUrl) {
-        photo = document.createElement('img');
-        photo.className = 'therapist-photo';
-        photo.alt = 'Therapist photo';
-        photo.src = photoUrl;
-        card.insertBefore(photo, card.firstChild);
-      }
       
       // Update bio content
       bio.innerHTML = `<p>${bioText}</p>`;
@@ -1118,11 +1107,10 @@ async function toggleTherapistBio(therapistId) {
       // Expand the card
       card.classList.add('expanded');
       bio.classList.add('expanded');
-      if (photo) photo.classList.add('expanded');
       readMoreBtn.textContent = 'Show Less';
       
     } catch (error) {
-      console.error('Error fetching therapist details:', error);
+      console.error('Error fetching therapist bio:', error);
       bio.innerHTML = '<p>Error loading bio</p>';
       card.classList.add('expanded');
       bio.classList.add('expanded');

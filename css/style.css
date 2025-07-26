@@ -457,21 +457,7 @@ textarea {
   align-items: stretch;
 }
 
-.therapist-photo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e9ecef;
-  flex-shrink: 0;
-}
 
-.therapist-photo.expanded {
-  width: 80px;
-  height: 80px;
-  align-self: center;
-  margin-bottom: 12px;
-}
 
 .therapist-info {
   flex: 1;
@@ -777,16 +763,6 @@ textarea {
     padding: 12px;
     gap: 12px;
     margin-bottom: 8px;
-  }
-  
-  .therapist-photo {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .therapist-photo.expanded {
-    width: 60px;
-    height: 60px;
   }
   
   .therapist-name {
