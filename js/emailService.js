@@ -18,25 +18,25 @@ const EmailService = {
     console.log('📧 Sending booking confirmation email...', bookingData);
     
     try {
-      // Simplified template parameters - only essential fields
+      // Basic EmailJS parameters - start with minimal set
       const templateParams = {
-        customer_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
-        customer_email: bookingData.customer_email,
-        customer_phone: bookingData.customer_phone || 'N/A',
-        booking_id: bookingData.booking_id,
-        business_name: bookingData.business_name || '',
-        address: bookingData.address || 'N/A',
-        service_name: bookingData.service_name,
-        therapist_name: bookingData.therapist_name || 'Available Therapist',
-        gender_preference: bookingData.gender_preference || 'No preference',
-        duration_minutes: bookingData.duration_minutes,
-        booking_date: bookingData.booking_date,
-        booking_time: bookingData.booking_time,
-        room_number: bookingData.room_number || '',
-        booker_name: bookingData.booker_name || '',
-        notes: bookingData.notes || '',
-        total_price: bookingData.total_price || 'N/A',
-        parking: bookingData.parking || 'N/A'
+        to_email: bookingData.customer_email,
+        to_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
+        from_name: 'Rejuvenators Mobile Massage',
+        message: `Your booking request has been received!
+
+Booking Details:
+- Booking ID: ${bookingData.booking_id}
+- Service: ${bookingData.service_name}
+- Date: ${bookingData.booking_date}
+- Time: ${bookingData.booking_time}
+- Address: ${bookingData.address}
+- Duration: ${bookingData.duration_minutes} minutes
+- Price: ${bookingData.total_price}
+
+We will contact you shortly to confirm your booking.
+
+Thank you for choosing Rejuvenators Mobile Massage!`
       };
 
       console.log('📧 Template parameters:', templateParams);
