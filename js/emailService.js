@@ -1,6 +1,6 @@
 // EmailJS configuration - will be set from environment variables
 let EMAILJS_SERVICE_ID = 'service_puww2kb';
-let EMAILJS_TEMPLATE_ID = 'template_zqjm4om'; // Use the new comprehensive template
+let EMAILJS_TEMPLATE_ID = 'template_ewtvv1j'; // Use the new professional template
 let EMAILJS_PUBLIC_KEY = 'qfM_qA664E4JddSMN';
 
 // Initialize EmailJS when the script loads
@@ -18,18 +18,24 @@ const EmailService = {
     console.log('📧 Sending booking confirmation email...', bookingData);
     
     try {
-      // EmailJS parameters with correct recipient structure
+      // Send all required parameters for the new template
       const templateParams = {
-        user_email: bookingData.customer_email,
-        user_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
-        company_name: 'Rejuvenators Mobile Massage',
+        customer_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
+        customer_email: bookingData.customer_email,
         booking_id: bookingData.booking_id,
         service_name: bookingData.service_name,
+        duration_minutes: bookingData.duration_minutes,
         booking_date: bookingData.booking_date,
         booking_time: bookingData.booking_time,
         address: bookingData.address,
-        duration_minutes: bookingData.duration_minutes,
-        total_price: bookingData.total_price
+        business_name: bookingData.business_name || '',
+        room_number: bookingData.room_number || '',
+        gender_preference: bookingData.gender_preference || '',
+        therapist_name: bookingData.therapist_name || '',
+        parking: bookingData.parking || '',
+        booker_name: bookingData.booker_name || '',
+        notes: bookingData.notes || '',
+        total_price: bookingData.total_price || ''
       };
 
       console.log('📧 Template parameters:', templateParams);
