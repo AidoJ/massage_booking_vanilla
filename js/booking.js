@@ -982,12 +982,23 @@ async function updateTherapistSelection() {
   therapistSelectionDiv.innerHTML = '';
   if (!serviceId || !durationVal || !dateVal || !timeVal || !genderVal) return;
 
-  // Get all therapists who match service and gender
+  // Get all therapists who match service and gender with bio and profile_pic
   const { data: therapistLinks } = await window.supabase
     .from('therapist_services')
-    .select('therapist_id, therapist:therapist_id (id, first_name, last_name, gender, is_active)')
+    .select(`
+      therapist_id, 
+      therapist_profiles!therapist_id (
+        id, 
+        first_name, 
+        last_name, 
+        gender, 
+        is_active,
+        bio,
+        profile_pic
+      )
+    `)
     .eq('service_id', serviceId);
-  let therapists = (therapistLinks || []).map(row => row.therapist).filter(t => t && t.is_active);
+  let therapists = (therapistLinks || []).map(row => row.therapist_profiles).filter(t => t && t.is_active);
   if (genderVal !== 'any') therapists = therapists.filter(t => t.gender === genderVal);
 
   // Deduplicate therapists by id (fix for triplicates)
@@ -1010,16 +1021,44 @@ async function updateTherapistSelection() {
     return;
   }
 
-  // Render therapists as radio buttons
+  // Render therapists as cards with images and bios
   availableTherapists.forEach(t => {
     const card = document.createElement('div');
-    card.className = 'therapist-card horizontal';
+    card.className = 'therapist-card';
+    card.dataset.therapistId = t.id;
+    
+    const photoUrl = t.profile_pic || 'https://via.placeholder.com/50x50/007e8c/ffffff?text=' + t.first_name.charAt(0);
+    const bio = t.bio || 'No bio available';
+    
     card.innerHTML = `
-      <label class="therapist-radio-label" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-        <span class="therapist-name">${t.first_name} ${t.last_name}</span>
-        <input type="radio" name="therapistId" value="${t.id}" data-name="${t.first_name} ${t.last_name}" class="therapist-radio-custom">
-      </label>
+      <img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo" onerror="this.src='https://via.placeholder.com/50x50/007e8c/ffffff?text=${t.first_name.charAt(0)}'">
+      <div class="therapist-info">
+        <div class="therapist-name">
+          <span>${t.first_name} ${t.last_name}</span>
+          <button type="button" class="read-more-btn" onclick="toggleTherapistBio(${t.id})">Read More</button>
+        </div>
+        <div class="therapist-bio" id="bio-${t.id}">
+          <p>${bio}</p>
+        </div>
+        <input type="radio" name="therapistId" value="${t.id}" data-name="${t.first_name} ${t.last_name}" style="position: absolute; opacity: 0; pointer-events: none;">
+      </div>
     `;
+    
+    // Add click handler for the entire card
+    card.addEventListener('click', function(e) {
+      if (e.target.classList.contains('read-more-btn')) return; // Don't trigger selection when clicking read more
+      
+      // Remove selection from other cards
+      document.querySelectorAll('.therapist-card').forEach(c => c.classList.remove('selected'));
+      
+      // Select this card
+      this.classList.add('selected');
+      
+      // Check the radio button
+      const radio = this.querySelector('input[type="radio"]');
+      radio.checked = true;
+    });
+    
     therapistSelectionDiv.appendChild(card);
   });
 }
@@ -1051,6 +1090,28 @@ document.querySelectorAll('input[name="genderPref"]').forEach(el => {
     if (err) err.textContent = '';
   });
 }); 
+
+// Toggle therapist bio visibility
+function toggleTherapistBio(therapistId) {
+  const card = document.querySelector(`[data-therapist-id="${therapistId}"]`);
+  const bio = document.getElementById(`bio-${therapistId}`);
+  const photo = card.querySelector('.therapist-photo');
+  const readMoreBtn = card.querySelector('.read-more-btn');
+  
+  if (card.classList.contains('expanded')) {
+    // Collapse
+    card.classList.remove('expanded');
+    bio.classList.remove('expanded');
+    photo.classList.remove('expanded');
+    readMoreBtn.textContent = 'Read More';
+  } else {
+    // Expand
+    card.classList.add('expanded');
+    bio.classList.add('expanded');
+    photo.classList.add('expanded');
+    readMoreBtn.textContent = 'Show Less';
+  }
+}
 
 // STRIPE INTEGRATION
 let stripe, elements, card;

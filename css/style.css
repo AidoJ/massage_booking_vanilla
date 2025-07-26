@@ -282,6 +282,7 @@ textarea {
   background: #fff;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  display: none;
 }
 
 .custom-radio input:checked ~ .checkmark {
@@ -429,7 +430,7 @@ textarea {
 
 .therapist-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding: 16px;
   border: 2px solid #e9ecef;
@@ -438,6 +439,7 @@ textarea {
   cursor: pointer;
   transition: all 0.3s ease;
   background: #fff;
+  position: relative;
 }
 
 .therapist-card:hover {
@@ -450,13 +452,25 @@ textarea {
   background: #f0f8ff;
 }
 
+.therapist-card.expanded {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .therapist-photo {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #e9ecef;
   flex-shrink: 0;
+}
+
+.therapist-photo.expanded {
+  width: 80px;
+  height: 80px;
+  align-self: center;
+  margin-bottom: 12px;
 }
 
 .therapist-info {
@@ -469,6 +483,9 @@ textarea {
   color: #00729B;
   margin: 0 0 4px 0;
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .therapist-bio {
@@ -476,6 +493,16 @@ textarea {
   margin: 0 0 6px 0;
   font-size: 0.85rem;
   line-height: 1.4;
+  display: none;
+}
+
+.therapist-bio.expanded {
+  display: block;
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #00729B;
 }
 
 .therapist-experience {
@@ -500,6 +527,24 @@ textarea {
   padding: 4px 8px;
   border-radius: 4px;
   display: inline-block;
+}
+
+.read-more-btn {
+  background: none;
+  border: none;
+  color: #00729B;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  text-decoration: underline;
+}
+
+.read-more-btn:hover {
+  background: #f0f8ff;
+  color: #005a7a;
 }
 
 /* Customer Details - Mobile Optimized */
