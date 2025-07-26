@@ -18,25 +18,18 @@ const EmailService = {
     console.log('📧 Sending booking confirmation email...', bookingData);
     
     try {
-      // Basic EmailJS parameters - start with minimal set
+      // EmailJS parameters with correct recipient structure
       const templateParams = {
-        to_email: bookingData.customer_email,
-        to_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
-        from_name: 'Rejuvenators Mobile Massage',
-        message: `Your booking request has been received!
-
-Booking Details:
-- Booking ID: ${bookingData.booking_id}
-- Service: ${bookingData.service_name}
-- Date: ${bookingData.booking_date}
-- Time: ${bookingData.booking_time}
-- Address: ${bookingData.address}
-- Duration: ${bookingData.duration_minutes} minutes
-- Price: ${bookingData.total_price}
-
-We will contact you shortly to confirm your booking.
-
-Thank you for choosing Rejuvenators Mobile Massage!`
+        user_email: bookingData.customer_email,
+        user_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
+        company_name: 'Rejuvenators Mobile Massage',
+        booking_id: bookingData.booking_id,
+        service_name: bookingData.service_name,
+        booking_date: bookingData.booking_date,
+        booking_time: bookingData.booking_time,
+        address: bookingData.address,
+        duration_minutes: bookingData.duration_minutes,
+        total_price: bookingData.total_price
       };
 
       console.log('📧 Template parameters:', templateParams);
