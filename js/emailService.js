@@ -5,10 +5,21 @@ let EMAILJS_PUBLIC_KEY = 'qfM_qA664E4JddSMN';
 
 // Initialize EmailJS when the script loads
 (function() {
-    if (typeof emailjs !== 'undefined') {
-      emailjs.init(EMAILJS_PUBLIC_KEY);
-      console.log('✅ EmailJS initialized successfully');
-  }
+    // Wait for EmailJS to be available
+    const initEmailJS = () => {
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(EMAILJS_PUBLIC_KEY);
+            console.log('✅ EmailJS initialized successfully');
+            return true;
+        }
+        return false;
+    };
+    
+    // Try to initialize immediately
+    if (!initEmailJS()) {
+        // If not available, wait and try again
+        setTimeout(initEmailJS, 1000);
+    }
 })();
 
 // Email service functions
@@ -16,6 +27,12 @@ const EmailService = {
   // Send Email 1: Booking Request Received to Client
   async sendBookingRequestReceived(bookingData) {
     console.log('📧 Sending booking confirmation email...', bookingData);
+    
+    // Ensure EmailJS is initialized
+    if (typeof emailjs === 'undefined') {
+      console.error('❌ EmailJS not loaded');
+      return { success: false, error: 'EmailJS not loaded' };
+    }
     
     try {
       // Use EmailJS standard parameters that work with any template
