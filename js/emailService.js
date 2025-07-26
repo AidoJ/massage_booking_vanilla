@@ -35,10 +35,10 @@ const EmailService = {
     }
     
     try {
-      // Send parameters that match the professional template variables
+      // Pass through all data exactly as received from booking form
       const templateParams = {
         to_email: bookingData.customer_email,
-        customer_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Valued Customer',
+        customer_name: bookingData.customer_name,
         customer_email: bookingData.customer_email,
         booking_id: bookingData.booking_id,
         service_name: bookingData.service_name,
@@ -46,14 +46,14 @@ const EmailService = {
         booking_date: bookingData.booking_date,
         booking_time: bookingData.booking_time,
         address: bookingData.address,
-        business_name: bookingData.business_name || '',
-        room_number: bookingData.room_number || '',
-        gender_preference: bookingData.gender_preference || '',
-        therapist_name: bookingData.therapist_name || '',
-        parking: bookingData.parking || '',
-        booker_name: bookingData.booker_name || '',
-        notes: bookingData.notes || '',
-        total_price: bookingData.total_price || ''
+        business_name: bookingData.business_name,
+        room_number: bookingData.room_number,
+        gender_preference: bookingData.gender_preference,
+        therapist_name: bookingData.therapist_name,
+        parking: bookingData.parking,
+        booker_name: bookingData.booker_name,
+        notes: bookingData.notes,
+        total_price: bookingData.total_price
       };
 
       console.log('📧 Template parameters:', templateParams);

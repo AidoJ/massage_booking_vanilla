@@ -1452,7 +1452,7 @@ async function sendBookingNotifications(bookingData, bookingId) {
   console.log('📧 Starting email notifications...', { bookingData, bookingId });
   
   try {
-    // Prepare email data with correct structure
+    // Prepare email data with ALL required fields for the template
     const emailData = {
       ...bookingData,
       booking_id: bookingId,
@@ -1465,7 +1465,16 @@ async function sendBookingNotifications(bookingData, bookingId) {
       therapist_name: bookingData.therapist_name || 'Available Therapist',
       booking_date: bookingData.booking_date || new Date().toISOString().split('T')[0],
       booking_time: bookingData.booking_time || '09:00',
-              total_price: bookingData.price ? `$${bookingData.price.toFixed(2)}` : 'N/A'
+      total_price: bookingData.price ? `$${bookingData.price.toFixed(2)}` : 'N/A',
+      // Add missing fields that the template expects
+      address: bookingData.address || 'N/A',
+      business_name: bookingData.business_name || '',
+      room_number: bookingData.room_number || '',
+      gender_preference: bookingData.gender_preference || 'No preference',
+      parking: bookingData.parking || 'N/A',
+      booker_name: bookingData.booker_name || '',
+      notes: bookingData.notes || '',
+      duration_minutes: bookingData.duration_minutes || '60'
     };
     
     // Send email notification
