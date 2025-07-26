@@ -143,7 +143,7 @@ h1 {
 
 /* Form Elements - Mobile Optimized */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .form-group label {
@@ -197,7 +197,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .radio-group.horizontal {
@@ -216,6 +216,8 @@ textarea {
   transition: all 0.3s ease;
   font-size: 0.95rem;
   font-weight: 500;
+  width: fit-content;
+  min-width: 200px;
 }
 
 .radio-inline:hover {
@@ -255,6 +257,7 @@ textarea {
   font-size: 0.95rem;
   font-weight: 500;
   position: relative;
+  user-select: none;
 }
 
 .custom-radio:hover {
@@ -266,6 +269,7 @@ textarea {
   position: absolute;
   opacity: 0;
   cursor: pointer;
+  pointer-events: none;
 }
 
 .checkmark {
@@ -277,6 +281,7 @@ textarea {
   position: relative;
   background: #fff;
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .custom-radio input:checked ~ .checkmark {
@@ -317,25 +322,26 @@ textarea {
 }
 
 .btn.primary {
-  background: #00729B;
+  background: #007e8c;
   color: #ffffff;
 }
 
 .btn.primary:hover {
   background: #005a7a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 112, 155, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 126, 140, 0.3);
 }
 
 .btn:not(.primary) {
-  background: #f8f9fa;
-  color: #333;
-  border: 2px solid #e0e0e0;
+  background: #e6f7f8;
+  color: #007e8c;
+  border: 2px solid #007e8c;
 }
 
 .btn:not(.primary):hover {
-  background: #e9ecef;
-  border-color: #00729B;
+  background: #d1f2f4;
+  border-color: #005a7a;
+  color: #005a7a;
 }
 
 .btn:disabled {
@@ -575,9 +581,9 @@ textarea {
   margin-top: 8px;
   padding: 8px 12px;
   border-radius: 4px;
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  color: #856404;
+  background: transparent;
+  border: none;
+  color: #b00;
 }
 
 /* Spinner - Mobile Optimized */
