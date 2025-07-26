@@ -1012,22 +1012,22 @@ async function updateTherapistSelection() {
 
   // Render therapists as cards with images and bios
   availableTherapists.forEach(async (t) => {
-    // Get bio and profile_pic from therapist_profiles table
+    // Get bio and profile_pic from therapist_profiles table using therapist_id
     const { data: profileData } = await window.supabase
       .from('therapist_profiles')
       .select('bio, profile_pic')
-      .eq('id', t.id)
+      .eq('therapist_id', t.id)
       .single();
     
     const card = document.createElement('div');
     card.className = 'therapist-card';
     card.dataset.therapistId = t.id;
     
-    const photoUrl = profileData?.profile_pic || '';
+    const photoUrl = profileData?.profile_pic || null;
     const bio = profileData?.bio || 'No bio available';
     
     card.innerHTML = `
-      <img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo" onerror="this.style.display='none'">
+      ${photoUrl ? `<img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo">` : ''}
       <div class="therapist-info">
         <div class="therapist-name">
           <span>${t.first_name} ${t.last_name}</span>
