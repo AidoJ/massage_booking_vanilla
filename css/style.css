@@ -772,6 +772,31 @@ textarea {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
   
+  /* Make therapist cards smaller on laptop */
+  .therapist-card {
+    padding: 12px;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .therapist-photo {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .therapist-photo.expanded {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .therapist-name {
+    font-size: 0.9rem;
+  }
+  
+  .therapist-bio {
+    font-size: 0.8rem;
+  }
+  
   .progress-bar {
     min-width: 800px;
     min-height: 90px;

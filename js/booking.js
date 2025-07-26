@@ -985,9 +985,14 @@ async function updateTherapistSelection() {
   // Get all therapists who match service and gender
   const { data: therapistLinks } = await window.supabase
     .from('therapist_services')
-    .select('therapist_id, therapist:therapist_id (id, first_name, last_name, gender, is_active)')
+    .select(`
+      therapist_id,
+      therapist_profiles!therapist_id (id, first_name, last_name, gender, is_active)
+    `)
     .eq('service_id', serviceId);
-  let therapists = (therapistLinks || []).map(row => row.therapist).filter(t => t && t.is_active);
+  let therapists = (therapistLinks || []).map(row => ({
+    ...row.therapist_profiles
+  })).filter(t => t && t.is_active);
   if (genderVal !== 'any') therapists = therapists.filter(t => t.gender === genderVal);
 
   // Deduplicate therapists by id (fix for triplicates)
@@ -1011,31 +1016,18 @@ async function updateTherapistSelection() {
   }
 
   // Render therapists as cards with images and bios
-  availableTherapists.forEach(async (t) => {
-    // Get bio and profile_pic from therapist_profiles table using therapist_id
-    const { data: profileData } = await window.supabase
-      .from('therapist_profiles')
-      .select('bio, profile_pic')
-      .eq('therapist_id', t.id)
-      .single();
-    
+  availableTherapists.forEach(t => {
     const card = document.createElement('div');
     card.className = 'therapist-card';
     card.dataset.therapistId = t.id;
     
-    const photoUrl = profileData?.profile_pic || null;
-    const bio = profileData?.bio || 'No bio available';
-    
     card.innerHTML = `
-      ${photoUrl ? `<img src="${photoUrl}" alt="${t.first_name} ${t.last_name}" class="therapist-photo">` : ''}
       <div class="therapist-info">
         <div class="therapist-name">
           <span>${t.first_name} ${t.last_name}</span>
-          <button type="button" class="read-more-btn" onclick="toggleTherapistBio(${t.id})">Read More</button>
+          <button type="button" class="read-more-btn" onclick="toggleTherapistBio('${t.id}')">Read More</button>
         </div>
-        <div class="therapist-bio" id="bio-${t.id}">
-          <p>${bio}</p>
-        </div>
+        <div class="therapist-bio" id="bio-${t.id}"></div>
         <input type="radio" name="therapistId" value="${t.id}" data-name="${t.first_name} ${t.last_name}" style="position: absolute; opacity: 0; pointer-events: none;">
       </div>
     `;
@@ -1088,24 +1080,54 @@ document.querySelectorAll('input[name="genderPref"]').forEach(el => {
 }); 
 
 // Toggle therapist bio visibility
-function toggleTherapistBio(therapistId) {
+async function toggleTherapistBio(therapistId) {
   const card = document.querySelector(`[data-therapist-id="${therapistId}"]`);
   const bio = document.getElementById(`bio-${therapistId}`);
-  const photo = card.querySelector('.therapist-photo');
   const readMoreBtn = card.querySelector('.read-more-btn');
   
   if (card.classList.contains('expanded')) {
     // Collapse
     card.classList.remove('expanded');
     bio.classList.remove('expanded');
-    photo.classList.remove('expanded');
     readMoreBtn.textContent = 'Read More';
   } else {
-    // Expand
-    card.classList.add('expanded');
-    bio.classList.add('expanded');
-    photo.classList.add('expanded');
-    readMoreBtn.textContent = 'Show Less';
+    // Expand - fetch bio and picture
+    try {
+      const { data: therapistData } = await window.supabase
+        .from('therapist_profiles')
+        .select('bio, profile_pic')
+        .eq('id', therapistId)
+        .single();
+      
+      const photoUrl = therapistData?.profile_pic || null;
+      const bioText = therapistData?.bio || 'No bio available';
+      
+      // Add photo if it doesn't exist
+      let photo = card.querySelector('.therapist-photo');
+      if (!photo && photoUrl) {
+        photo = document.createElement('img');
+        photo.className = 'therapist-photo';
+        photo.alt = 'Therapist photo';
+        photo.src = photoUrl;
+        card.insertBefore(photo, card.firstChild);
+      }
+      
+      // Update bio content
+      bio.innerHTML = `<p>${bioText}</p>`;
+      
+      // Expand the card
+      card.classList.add('expanded');
+      bio.classList.add('expanded');
+      if (photo) photo.classList.add('expanded');
+      readMoreBtn.textContent = 'Show Less';
+      
+    } catch (error) {
+      console.error('Error fetching therapist details:', error);
+      bio.innerHTML = '<p>Error loading bio</p>';
+      card.classList.add('expanded');
+      bio.classList.add('expanded');
+      readMoreBtn.textContent = 'Show Less';
+    }
   }
 }
 
