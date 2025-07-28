@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Booking Request</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; }
+        .header { background-color: #008e8c; color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .booking-details { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #008e8c; }
+        .fee-details { background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .action-buttons { text-align: center; margin: 30px 0; }
+        .btn { display: inline-block; padding: 12px 30px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .btn-accept { background-color: #28a745; color: white; }
+        .btn-decline { background-color: #dc3545; color: white; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        .urgent { color: #dc3545; font-weight: bold; }
+        .highlight { color: #008e8c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>New Booking Request</h1>
+            <p>Action Required - Please Respond Promptly</p>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dear <span class="highlight">{{therapist_name}}</span>,
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                You have received a new booking request that matches your availability and service offerings. 
+                This is an excellent opportunity to provide your professional massage therapy services.
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                <span class="urgent">⚠️ IMPORTANT:</span> Please respond within 
+                <strong>{{response_timeout_minutes}} minutes</strong> to secure this booking.
+            </p>
+            
+            <div class="booking-details">
+                <h3 style="color: #008e8c; margin-top: 0;">📋 Booking Summary</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px 0;"><strong>Booking ID:</strong></td><td style="padding: 8px 0;">{{booking_id}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Customer Code:</strong></td><td style="padding: 8px 0;">{{customer_code}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Customer Name:</strong></td><td style="padding: 8px 0;">{{customer_name}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Customer Email:</strong></td><td style="padding: 8px 0;">{{customer_email}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Business Name:</strong></td><td style="padding: 8px 0;">{{business_name}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Address:</strong></td><td style="padding: 8px 0;">{{address}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Service:</strong></td><td style="padding: 8px 0;">{{service}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Duration:</strong></td><td style="padding: 8px 0;">{{duration}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Date & Time:</strong></td><td style="padding: 8px 0;">{{date_time}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Gender Preference:</strong></td><td style="padding: 8px 0;">{{gender_preference}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Parking:</strong></td><td style="padding: 8px 0;">{{parking}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Room Number:</strong></td><td style="padding: 8px 0;">{{room_number}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Booker Name:</strong></td><td style="padding: 8px 0;">{{booker_name}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Notes:</strong></td><td style="padding: 8px 0;">{{notes}}</td></tr>
+                </table>
+            </div>
+            
+            <div class="fee-details">
+                <h3 style="color: #28a745; margin-top: 0;">💰 Your Earnings</h3>
+                <p style="font-size: 18px; font-weight: bold; color: #28a745; text-align: center; margin: 10px 0;">
+                    ${{therapist_fee}}
+                </p>
+            </div>
+            
+            <div class="action-buttons">
+                <h3 style="color: #008e8c;">Please Respond:</h3>
+                <a href="{{accept_url}}" class="btn btn-accept">✅ ACCEPT BOOKING</a>
+                <a href="{{decline_url}}" class="btn btn-decline">❌ DECLINE BOOKING</a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6c757d; text-align: center; margin-top: 20px;">
+                <strong>Note:</strong> If you accept this booking, you will receive a confirmation email with all the details. 
+                If you decline, the system will automatically offer this booking to other available therapists.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message from the Massage Booking System</p>
+            <p>If you have any questions, please contact support</p>
+        </div>
+    </div>
+</body>
+</html> 

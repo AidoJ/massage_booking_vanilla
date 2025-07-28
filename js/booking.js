@@ -561,16 +561,26 @@ console.log('Globals:', {
   });
 
   // Initialize Google Places Autocomplete
+  console.log('🔍 Checking Google Maps API availability...');
+  console.log('Google object available:', !!window.google);
+  console.log('Google Maps available:', !!(window.google && window.google.maps));
+  console.log('Places API available:', !!(window.google && window.google.maps && window.google.maps.places));
+  
+  // Simple initialization - try immediately, then on window load if needed
   if (window.google && window.google.maps && window.google.maps.places) {
+    console.log('✅ Google Maps API ready, initializing autocomplete...');
     initAutocomplete();
   } else {
-    window.initAutocomplete = initAutocomplete;
+    console.log('⏳ Google Maps API not ready, waiting for window load...');
     window.addEventListener('load', function () {
+      console.log('🔄 Window loaded, checking Google Maps again...');
       if (window.google && window.google.maps && window.google.maps.places) {
+        console.log('✅ Google Maps API now ready, initializing autocomplete...');
         initAutocomplete();
       } else {
+        console.error('❌ Google Maps API still not available after window load');
         const statusDiv = document.getElementById('address-autocomplete-status');
-        if (statusDiv) statusDiv.textContent = 'Google Maps script failed to load.';
+        if (statusDiv) statusDiv.textContent = 'Google Maps script failed to load. Please check your internet connection and API key.';
       }
     });
   }
@@ -596,39 +606,105 @@ console.log('Globals:', {
 });
 
 // Google Places Autocomplete for Address
+let autocompleteInitialized = false;
+
 function initAutocomplete() {
-  const addressInput = document.getElementById('address');
-  const statusDiv = document.getElementById('address-autocomplete-status');
-  if (!addressInput || !window.google || !window.google.maps) {
-    if (statusDiv) statusDiv.textContent = 'Google Places Autocomplete failed to load.';
+  // Prevent multiple initializations
+  if (autocompleteInitialized) {
+    console.log('⚠️ Autocomplete already initialized, skipping...');
     return;
   }
-  // Use a session token for better prediction quality
-  const sessionToken = new google.maps.places.AutocompleteSessionToken();
-  const autocomplete = new google.maps.places.Autocomplete(addressInput, {
-    // types: ['geocode'], // Removed to allow hotels, POIs, etc.
-    componentRestrictions: { country: 'au' },
-    sessionToken: sessionToken
-  });
-  autocomplete.addListener('place_changed', function () {
-    const place = autocomplete.getPlace();
-    if (place && place.geometry) {
-      const selected = {
-        name: place.name || '',
-        address: place.formatted_address || addressInput.value,
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng()
-      };
-      addressInput.value = selected.address;
-      addressInput.dataset.lat = selected.lat;
-      addressInput.dataset.lng = selected.lng;
-      addressInput.dataset.businessName = selected.name;
-      if (statusDiv) statusDiv.textContent = 'Address selected!';
-      console.log('Selected address:', selected);
-      checkTherapistCoverageForAddress();
-    }
-  });
-  if (statusDiv) statusDiv.textContent = '';
+  
+  const addressInput = document.getElementById('address');
+  const statusDiv = document.getElementById('address-autocomplete-status');
+  
+  console.log('🔍 Initializing Google Maps Autocomplete...');
+  console.log('Address input found:', !!addressInput);
+  console.log('Google Maps available:', !!(window.google && window.google.maps));
+  console.log('Places API available:', !!(window.google && window.google.maps && window.google.maps.places));
+  
+  if (!addressInput) {
+    console.error('❌ Address input element not found');
+    if (statusDiv) statusDiv.textContent = 'Address input not found.';
+    return;
+  }
+  
+  if (!window.google) {
+    console.error('❌ Google Maps API not loaded');
+    if (statusDiv) statusDiv.textContent = 'Google Maps API not loaded. Please check your internet connection.';
+    return;
+  }
+  
+  if (!window.google.maps) {
+    console.error('❌ Google Maps library not available');
+    if (statusDiv) statusDiv.textContent = 'Google Maps library not available.';
+    return;
+  }
+  
+  if (!window.google.maps.places) {
+    console.error('❌ Google Places API not available');
+    if (statusDiv) statusDiv.textContent = 'Google Places API not available. Please check API key and billing.';
+    return;
+  }
+  
+  try {
+    // Use a session token for better prediction quality
+    const sessionToken = new google.maps.places.AutocompleteSessionToken();
+    console.log('✅ Session token created');
+    
+    const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+      // types: ['geocode'], // Removed to allow hotels, POIs, etc.
+      componentRestrictions: { country: 'au' },
+      sessionToken: sessionToken
+    });
+    console.log('✅ Autocomplete instance created');
+    
+    autocomplete.addListener('place_changed', function () {
+      console.log('📍 Place selection triggered');
+      const place = autocomplete.getPlace();
+      console.log('Selected place:', place);
+      
+      if (place && place.geometry) {
+        const selected = {
+          name: place.name || '',
+          address: place.formatted_address || addressInput.value,
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng()
+        };
+        addressInput.value = selected.address;
+        addressInput.dataset.lat = selected.lat;
+        addressInput.dataset.lng = selected.lng;
+        addressInput.dataset.businessName = selected.name;
+        if (statusDiv) statusDiv.textContent = 'Address selected!';
+        console.log('✅ Address selected:', selected);
+        checkTherapistCoverageForAddress();
+      } else {
+        console.warn('⚠️ Place selected but no geometry available');
+        if (statusDiv) statusDiv.textContent = 'Please select an address from the dropdown.';
+      }
+    });
+    
+    if (statusDiv) statusDiv.textContent = 'Google Maps Autocomplete ready! Start typing your address...';
+    console.log('✅ Google Maps Autocomplete initialized successfully');
+    autocompleteInitialized = true;
+    
+  } catch (error) {
+    console.error('❌ Error initializing Google Maps Autocomplete:', error);
+    if (statusDiv) statusDiv.textContent = 'Error initializing address autocomplete: ' + error.message;
+    
+    // Fallback: Allow manual address entry
+    console.log('🔄 Setting up manual address entry fallback...');
+    if (statusDiv) statusDiv.textContent = 'Address autocomplete unavailable. You can still enter your address manually.';
+    
+    // Add manual address validation
+    addressInput.addEventListener('blur', function() {
+      if (addressInput.value.trim()) {
+        console.log('📝 Manual address entered:', addressInput.value);
+        // You could add geocoding here if needed
+        checkTherapistCoverageForAddress();
+      }
+    });
+  }
 }
 
 // Add this function to check therapist geolocation coverage after address selection
@@ -648,7 +724,7 @@ async function checkTherapistCoverageForAddress() {
     .select('id, latitude, longitude, service_radius_km, is_active')
     .eq('is_active', true);
   if (!data || data.length === 0) {
-    statusDiv.textContent = 'Sorry, we don’t have any therapists servicing your area at the moment.';
+    statusDiv.textContent = 'Sorry, we don't have any therapists servicing your area at the moment.';
     disableContinueFromAddress();
     return;
   }
@@ -670,7 +746,7 @@ async function checkTherapistCoverageForAddress() {
     return dist <= t.service_radius_km;
   });
   if (!covered) {
-    statusDiv.textContent = 'Sorry, we don’t have any therapists servicing your area at the moment.';
+    statusDiv.textContent = 'Sorry, we don't have any therapists servicing your area at the moment.';
     disableContinueFromAddress();
   } else {
     statusDiv.textContent = '';
@@ -1193,6 +1269,13 @@ async function populateBookingSummary() {
   const price = document.getElementById('priceAmount').textContent;
   const priceBreakdown = document.getElementById('priceBreakdown').innerHTML;
   
+  // Debug: Log therapist selection
+  console.log('🔍 Therapist selection debug:', {
+    selectedRadio: document.querySelector('input[name="therapistId"]:checked'),
+    therapistName: therapist,
+    allTherapistRadios: document.querySelectorAll('input[name="therapistId"]')
+  });
+  
   // Calculate therapist fee
   const therapist_fee = calculateTherapistFee(date, time, duration);
   const therapist_fee_display = therapist_fee ? `$${therapist_fee.toFixed(2)}` : 'N/A';
@@ -1211,7 +1294,7 @@ async function populateBookingSummary() {
     <p><strong>Therapist Gender Preference:</strong> ${gender}</p>
     <p><strong>Date & Time:</strong> ${date} at ${time}</p>
     <p><strong>Parking:</strong> ${parking}</p>
-    <p><strong>Therapist:</strong> ${therapist}</p>
+    <p><strong>Therapist:</strong> ${therapist || 'Not selected'}</p>
     <p><strong>Name:</strong> ${customerName}</p>
     <p><strong>Email:</strong> ${customerEmail}</p>
     <p><strong>Phone:</strong> ${customerPhone}</p>
@@ -1695,8 +1778,61 @@ if (confirmBtn) {
           booking_date: date,
           booking_time: time
         };
-        const emailResult = await sendBookingNotifications(emailData, bookingIdFormatted);
-    console.log('📧 Email notification result:', emailResult);
+        
+        // Step 1: Send booking request to customer (excluding therapist fees)
+        const customerEmailResult = await window.EmailService.sendBookingRequestToCustomer(emailData);
+        console.log('📧 Customer email notification result:', customerEmailResult);
+        
+        if (customerEmailResult.success) {
+          // Step 2: Send booking request to selected therapist (including therapist fees)
+          try {
+            // Get the selected therapist data
+            const selectedTherapistRadio = document.querySelector('input[name="therapistId"]:checked');
+            if (selectedTherapistRadio) {
+              const therapistId = selectedTherapistRadio.value;
+              
+              // Get therapist details from database
+              const { data: therapistData } = await window.supabase
+                .from('therapist_profiles')
+                .select('id, first_name, last_name, email')
+                .eq('id', therapistId)
+                .single();
+              
+              if (therapistData) {
+                const therapistInfo = {
+                  id: therapistData.id,
+                  name: `${therapistData.first_name} ${therapistData.last_name}`,
+                  email: therapistData.email
+                };
+                
+                console.log('📧 Sending booking request to selected therapist:', therapistInfo);
+                
+                const therapistEmailResult = await window.EmailService.sendBookingRequestToSelectedTherapist(emailData, therapistInfo);
+                console.log('📧 Therapist email result:', therapistEmailResult);
+                
+                // Step 3: Start timer for therapist response
+                // This would typically be handled by a backend service
+                // For now, we'll just log that the timer should start
+                console.log('⏰ Starting therapist response timer for', emailData.response_timeout_minutes || '30', 'minutes');
+                
+                // TODO: Implement timer system and accept/decline handlers
+                // This would involve:
+                // 1. Setting up a timer in the database
+                // 2. Creating API endpoints for accept/decline
+                // 3. Handling the timer expiration
+                
+              } else {
+                console.error('❌ Selected therapist not found in database');
+              }
+            } else {
+              console.error('❌ No therapist selected');
+            }
+            
+          } catch (error) {
+            console.error('❌ Error sending therapist email:', error);
+            // Don't fail the booking if therapist email fails
+          }
+        }
 
     // Show success message
     alert('Your booking request has been submitted successfully! You will receive a confirmation email shortly.');
