@@ -1933,3 +1933,16 @@ if (confirmBtn) {
       alert('Your booking request has been submitted successfully!\n' +
             'However, there was an issue sending email notifications. We will contact you directly.');
     }
+    
+    // Move to confirmation step
+    showStep('step10');
+        
+      } catch (error) {
+        console.error('❌ Error in booking submission:', error);
+        alert('There was an error submitting your booking. Please try again.');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm and Request Booking';
+      }
+    });
+  }
+});
