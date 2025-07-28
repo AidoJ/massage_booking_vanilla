@@ -9,6 +9,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || 'service_puww2kb';
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || 'template_ai9rrg6';
 const EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID || 'template_51wt6of';
+const EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID || 'template_confirmed';
+const EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID || 'template_therapist_ok';
+const EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_DECLINED_TEMPLATE_ID || 'template_declined';
+const EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = process.env.EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID || 'template_alternate';
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
 
 exports.handler = async (event, context) => {
@@ -220,6 +224,9 @@ async function handleBookingDecline(booking, therapist, headers) {
       const alternativeFound = await findAndAssignAlternativeTherapist(booking, therapist.id);
       
       if (alternativeFound) {
+        // Send "looking for alternate" email to client
+        await sendClientLookingForAlternateEmail(booking);
+        
         return {
           statusCode: 200,
           headers,
@@ -377,11 +384,12 @@ async function sendClientConfirmationEmail(booking, therapist) {
       duration: `${booking.duration_minutes} minutes`,
       date_time: new Date(booking.booking_time).toLocaleString(),
       address: booking.address,
+      room_number: booking.room_number || 'N/A',
       therapist: `${therapist.first_name} ${therapist.last_name}`,
       estimated_price: booking.price ? `$${booking.price.toFixed(2)}` : 'N/A'
     };
 
-    await sendEmail(EMAILJS_TEMPLATE_ID, templateParams);
+    await sendEmail(EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID, templateParams);
     console.log(`📧 Confirmation email sent to client: ${booking.customer_email}`);
 
   } catch (error) {
@@ -396,15 +404,18 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
       to_name: `${therapist.first_name} ${therapist.last_name}`,
       booking_id: booking.booking_id,
       client_name: `${booking.first_name} ${booking.last_name}`,
+      client_phone: booking.customer_phone || 'Not provided',
+      client_email: booking.customer_email,
       service_name: booking.services?.name || 'Massage Service',
       duration: `${booking.duration_minutes} minutes`,
       booking_date: new Date(booking.booking_time).toLocaleDateString(),
       booking_time: new Date(booking.booking_time).toLocaleTimeString(),
       address: booking.address,
+      room_number: booking.room_number || 'N/A',
       therapist_fee: booking.therapist_fee ? `$${booking.therapist_fee.toFixed(2)}` : 'TBD'
     };
 
-    await sendEmail(EMAILJS_TEMPLATE_ID, templateParams);
+    await sendEmail(EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID, templateParams);
     console.log(`📧 Confirmation email sent to therapist: ${therapist.email}`);
 
   } catch (error) {
@@ -420,15 +431,37 @@ async function sendClientDeclineEmail(booking) {
       customer_name: `${booking.first_name} ${booking.last_name}`,
       booking_id: booking.booking_id,
       service: booking.services?.name || 'Massage Service',
+      duration: `${booking.duration_minutes} minutes`,
       date_time: new Date(booking.booking_time).toLocaleString(),
-      reason: 'Therapist unavailable'
+      address: booking.address
     };
 
-    await sendEmail(EMAILJS_TEMPLATE_ID, templateParams);
+    await sendEmail(EMAILJS_BOOKING_DECLINED_TEMPLATE_ID, templateParams);
     console.log(`📧 Decline email sent to client: ${booking.customer_email}`);
 
   } catch (error) {
     console.error('❌ Error sending client decline email:', error);
+  }
+}
+
+async function sendClientLookingForAlternateEmail(booking) {
+  try {
+    const templateParams = {
+      to_email: booking.customer_email,
+      to_name: `${booking.first_name} ${booking.last_name}`,
+      customer_name: `${booking.first_name} ${booking.last_name}`,
+      booking_id: booking.booking_id,
+      service: booking.services?.name || 'Massage Service',
+      duration: `${booking.duration_minutes} minutes`,
+      date_time: new Date(booking.booking_time).toLocaleString(),
+      address: booking.address
+    };
+
+    await sendEmail(EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID, templateParams);
+    console.log(`📧 "Looking for alternate" email sent to client: ${booking.customer_email}`);
+
+  } catch (error) {
+    console.error('❌ Error sending "looking for alternate" email:', error);
   }
 }
 

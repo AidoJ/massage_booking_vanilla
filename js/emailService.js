@@ -2,6 +2,10 @@
 let EMAILJS_SERVICE_ID = 'service_puww2kb';
 let EMAILJS_TEMPLATE_ID = 'template_ai9rrg6'; // Client booking confirmation template
 let EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = 'template_51wt6of'; // New therapist booking request template
+let EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = 'template_confirmed'; // Booking confirmed template
+let EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = 'template_therapist_ok'; // Therapist confirmed template
+let EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = 'template_declined'; // Booking declined template
+let EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = 'template_alternate'; // Looking for alternate template
 let EMAILJS_PUBLIC_KEY = 'qfM_qA664E4JddSMN';
 
 // Initialize EmailJS when the script loads
@@ -190,7 +194,7 @@ const EmailService = {
         therapist_fee: bookingData.therapist_fee || 'N/A'
       };
 
-      const therapistConfirmationTemplateId = 'template_therapist_confirmed'; // You'll need to create this
+      const therapistConfirmationTemplateId = EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID;
       
       const response = await emailjs.send(
         EMAILJS_SERVICE_ID, 
@@ -222,7 +226,7 @@ const EmailService = {
         date_time: bookingData.booking_date + ' at ' + bookingData.booking_time
       };
 
-      const alternateTemplateId = 'template_looking_alternate'; // You'll need to create this
+      const alternateTemplateId = EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID;
       
       const response = await emailjs.send(
         EMAILJS_SERVICE_ID, 
@@ -254,7 +258,7 @@ const EmailService = {
         date_time: bookingData.booking_date + ' at ' + bookingData.booking_time
       };
 
-      const declinedTemplateId = 'template_booking_declined'; // You'll need to create this
+      const declinedTemplateId = EMAILJS_BOOKING_DECLINED_TEMPLATE_ID;
       
       const response = await emailjs.send(
         EMAILJS_SERVICE_ID, 
@@ -284,8 +288,8 @@ const EmailService = {
     try {
       // Generate Accept/Decline URLs
       const baseUrl = window.location.origin;
-      const acceptUrl = `${baseUrl}/api/booking-response?action=accept&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
-      const declineUrl = `${baseUrl}/api/booking-response?action=decline&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
+      const acceptUrl = `${baseUrl}/.netlify/functions/booking-response?action=accept&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
+      const declineUrl = `${baseUrl}/.netlify/functions/booking-response?action=decline&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
       
       // Calculate therapist fee
       const therapistFee = bookingData.therapist_fee ? `$${parseFloat(bookingData.therapist_fee).toFixed(2)}` : 'TBD';
@@ -329,6 +333,8 @@ const EmailService = {
       };
       
       console.log('📧 Therapist email template parameters:', templateParams);
+      console.log('📧 Using template ID:', EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID);
+      console.log('📧 Using service ID:', EMAILJS_SERVICE_ID);
       
       const response = await emailjs.send(
         EMAILJS_SERVICE_ID, 
@@ -337,6 +343,7 @@ const EmailService = {
       );
       
       console.log('✅ Therapist email sent successfully:', response);
+      console.log('📧 Full response details:', JSON.stringify(response, null, 2));
       return { success: true, message: 'Therapist email sent successfully', response };
     } catch (error) {
       console.error('❌ Error sending therapist email:', error);
@@ -366,7 +373,7 @@ const EmailService = {
       
       const response = await emailjs.send(
         EMAILJS_SERVICE_ID, 
-        EMAILJS_TEMPLATE_ID, // Using existing template for now
+        EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID,
         templateParams
       );
       

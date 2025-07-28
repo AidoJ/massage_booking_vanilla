@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed - Therapist</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; }
+        .header { background-color: #28a745; color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .booking-details { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .client-info { background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .fee-details { background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        .success { color: #28a745; font-weight: bold; }
+        .highlight { color: #007e8c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Booking Confirmed!</h1>
+            <p>You have successfully accepted a booking</p>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dear <span class="highlight">{{to_name}}</span>,
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Congratulations! You have successfully accepted booking <strong>{{booking_id}}</strong>. 
+                The client has been notified and is looking forward to their session with you.
+            </p>
+            
+            <div class="booking-details">
+                <h3 style="color: #28a745; margin-top: 0;">📋 Booking Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px 0;"><strong>Booking ID:</strong></td><td style="padding: 8px 0;">{{booking_id}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Service:</strong></td><td style="padding: 8px 0;">{{service_name}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Duration:</strong></td><td style="padding: 8px 0;">{{duration}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Date:</strong></td><td style="padding: 8px 0;">{{booking_date}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Time:</strong></td><td style="padding: 8px 0;">{{booking_time}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Address:</strong></td><td style="padding: 8px 0;">{{address}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Room Number:</strong></td><td style="padding: 8px 0;">{{room_number}}</td></tr>
+                </table>
+            </div>
+            
+            <div class="client-info">
+                <h3 style="color: #28a745; margin-top: 0;">👤 Client Information</h3>
+                <p style="font-size: 18px; font-weight: bold; color: #28a745; text-align: center; margin: 10px 0;">
+                    {{client_name}}
+                </p>
+                <p style="text-align: center; margin: 10px 0;">
+                    Phone: {{client_phone}}<br>
+                    Email: {{client_email}}
+                </p>
+            </div>
+            
+            <div class="fee-details">
+                <h3 style="color: #28a745; margin-top: 0;">💰 Your Earnings</h3>
+                <p style="font-size: 24px; font-weight: bold; color: #28a745; text-align: center; margin: 10px 0;">
+                    {{therapist_fee}}
+                </p>
+                <p style="text-align: center; margin: 10px 0; color: #6c757d;">
+                    Payment will be processed after the session completion
+                </p>
+            </div>
+            
+            <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                <h3 style="color: #856404; margin-top: 0;">📝 Important Reminders</h3>
+                <ul style="color: #856404; margin: 10px 0; padding-left: 20px;">
+                    <li>Arrive 10-15 minutes before the scheduled time</li>
+                    <li>Bring all necessary equipment and supplies</li>
+                    <li>Confirm client details upon arrival</li>
+                    <li>Collect payment after the session</li>
+                    <li>Update booking status in the system after completion</li>
+                </ul>
+            </div>
+            
+            <p style="font-size: 14px; color: #6c757d; text-align: center; margin-top: 20px;">
+                <strong>Need support?</strong> Contact us at 1300 302542 or email info@rejuvenators.com
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for being part of the Rejuvenators team!</p>
+            <p>We appreciate your commitment to providing excellent service.</p>
+        </div>
+    </div>
+</body>
+</html> 

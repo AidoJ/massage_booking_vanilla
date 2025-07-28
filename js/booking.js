@@ -507,6 +507,7 @@ console.log('Globals:', {
         if (s.key === 'min_booking_advance_hours') window.minBookingAdvanceHours = Number(s.value);
         if (s.key === 'therapist_daytime_hourly_rate') window.therapistDaytimeRate = Number(s.value);
         if (s.key === 'therapist_afterhours_hourly_rate') window.therapistAfterhoursRate = Number(s.value);
+        if (s.key === 'therapist_response_timeout_minutes') window.therapistResponseTimeoutMinutes = Number(s.value);
       }
       }
     } catch (error) {
@@ -519,6 +520,7 @@ console.log('Globals:', {
       window.minBookingAdvanceHours = 2;
       window.therapistDaytimeRate = 45;
       window.therapistAfterhoursRate = 55;
+      window.therapistResponseTimeoutMinutes = 3; // Default 3 minutes
     }
   }
 
@@ -1668,10 +1670,11 @@ async function sendBookingNotifications(bookingData, bookingId) {
         
         if (therapistData && !therapistError) {
           console.log('📧 Therapist data found:', therapistData);
+          
           therapistEmailResult = await window.EmailService.sendTherapistBookingRequest(
             emailData, 
             therapistData, 
-            60 // 60 minute timeout
+            window.therapistResponseTimeoutMinutes || 3 // Use database setting, default 3 minutes
           );
         } else {
           console.error('❌ Error fetching therapist data:', therapistError);

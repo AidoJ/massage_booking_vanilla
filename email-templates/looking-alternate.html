@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Looking for Alternative Therapist</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; }
+        .header { background-color: #ffc107; color: #212529; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .booking-details { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .info-box { background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        .highlight { color: #007e8c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Looking for Alternative Therapist</h1>
+            <p>We're finding you another great therapist</p>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dear <span class="highlight">{{customer_name}}</span>,
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Your selected therapist was unable to accept your booking at this time. 
+                Don't worry! We're actively looking for another qualified therapist who can provide you with the same excellent service.
+            </p>
+            
+            <div class="booking-details">
+                <h3 style="color: #ffc107; margin-top: 0;">📋 Your Booking Request</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px 0;"><strong>Booking ID:</strong></td><td style="padding: 8px 0;">{{booking_id}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Service:</strong></td><td style="padding: 8px 0;">{{service}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Duration:</strong></td><td style="padding: 8px 0;">{{duration}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Date & Time:</strong></td><td style="padding: 8px 0;">{{date_time}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Address:</strong></td><td style="padding: 8px 0;">{{address}}</td></tr>
+                </table>
+            </div>
+            
+            <div class="info-box">
+                <h3 style="color: #ffc107; margin-top: 0;">⏰ What Happens Next</h3>
+                <ul style="color: #856404; margin: 10px 0; padding-left: 20px;">
+                    <li><strong>We'll contact alternative therapists</strong> who match your requirements</li>
+                    <li><strong>You'll receive an update within 60 minutes</strong> with the result</li>
+                    <li><strong>If accepted:</strong> You'll get a confirmation email with therapist details</li>
+                    <li><strong>If no alternatives:</strong> We'll notify you and offer options</li>
+                </ul>
+            </div>
+            
+            <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8;">
+                <h3 style="color: #0c5460; margin-top: 0;">💡 Rest Assured</h3>
+                <p style="color: #0c5460; margin: 10px 0;">
+                    All our therapists are fully qualified and provide the same high-quality service. 
+                    Your experience will be just as excellent with any of our team members.
+                </p>
+            </div>
+            
+            <p style="font-size: 14px; color: #6c757d; text-align: center; margin-top: 20px;">
+                <strong>We'll be in touch soon!</strong> Thank you for your patience.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing Rejuvenators Mobile Massage</p>
+            <p>For immediate assistance, call 1300 302542</p>
+        </div>
+    </div>
+</body>
+</html> 

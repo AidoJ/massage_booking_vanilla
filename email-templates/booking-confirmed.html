@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; }
+        .header { background-color: #28a745; color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .booking-details { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .therapist-info { background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        .success { color: #28a745; font-weight: bold; }
+        .highlight { color: #007e8c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Booking Confirmed!</h1>
+            <p>Your massage booking has been accepted</p>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dear <span class="highlight">{{customer_name}}</span>,
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Great news! Your booking request has been accepted by your selected therapist. 
+                Your massage session is now confirmed and we're looking forward to providing you with an excellent experience.
+            </p>
+            
+            <div class="booking-details">
+                <h3 style="color: #28a745; margin-top: 0;">📋 Confirmed Booking Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px 0;"><strong>Booking ID:</strong></td><td style="padding: 8px 0;">{{booking_id}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Service:</strong></td><td style="padding: 8px 0;">{{service}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Duration:</strong></td><td style="padding: 8px 0;">{{duration}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Date & Time:</strong></td><td style="padding: 8px 0;">{{date_time}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Address:</strong></td><td style="padding: 8px 0;">{{address}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Room Number:</strong></td><td style="padding: 8px 0;">{{room_number}}</td></tr>
+                    <tr><td style="padding: 8px 0;"><strong>Estimated Price:</strong></td><td style="padding: 8px 0;">{{estimated_price}}</td></tr>
+                </table>
+            </div>
+            
+            <div class="therapist-info">
+                <h3 style="color: #28a745; margin-top: 0;">👨‍⚕️ Your Therapist</h3>
+                <p style="font-size: 18px; font-weight: bold; color: #28a745; text-align: center; margin: 10px 0;">
+                    {{therapist}}
+                </p>
+                <p style="text-align: center; margin: 10px 0;">
+                    Your therapist will arrive 10-15 minutes before your scheduled time.
+                </p>
+            </div>
+            
+            <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                <h3 style="color: #856404; margin-top: 0;">📝 Important Information</h3>
+                <ul style="color: #856404; margin: 10px 0; padding-left: 20px;">
+                    <li>Please ensure someone is available to let the therapist in</li>
+                    <li>Have a clean, quiet space ready for your massage</li>
+                    <li>Your therapist will bring all necessary equipment</li>
+                    <li>Payment will be collected after your session</li>
+                </ul>
+            </div>
+            
+            <p style="font-size: 14px; color: #6c757d; text-align: center; margin-top: 20px;">
+                <strong>Need to make changes?</strong> Please contact us at least 24 hours before your appointment.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing Rejuvenators Mobile Massage</p>
+            <p>For support, call 1300 302542 or email info@rejuvenators.com</p>
+        </div>
+    </div>
+</body>
+</html> 
