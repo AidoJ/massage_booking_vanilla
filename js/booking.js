@@ -1621,7 +1621,7 @@ function hideCustomerLookup() {
 
 // Send booking notifications via EmailJS
 async function sendBookingNotifications(bookingData, bookingId) {
-  console.log('📧 Starting email notifications...', { bookingData, bookingId });
+  console.log('📧 Starting enhanced email notifications...', { bookingData, bookingId });
   
   try {
     // Prepare email data with ALL required fields for the template
@@ -1649,16 +1649,50 @@ async function sendBookingNotifications(bookingData, bookingId) {
       duration_minutes: bookingData.duration_minutes || '60'
     };
     
-    // Send email notification
-    const emailResult = await window.EmailService.sendBookingRequestReceived(emailData);
+    // Send client confirmation email
+    console.log('📧 Sending client confirmation email...');
+    const clientEmailResult = await window.EmailService.sendBookingRequestReceived(emailData);
     
-    if (emailResult.success) {
-      console.log('✅ Email notification sent successfully');
-      return { success: true, message: 'Email sent successfully' };
-    } else {
-      console.error('❌ Email notification failed:', emailResult.error);
-      return { success: false, error: emailResult.error };
+    // Send therapist request email
+    console.log('📧 Sending therapist request email...');
+    let therapistEmailResult = { success: false, error: 'No therapist data available' };
+    
+    if (bookingData.therapist_id) {
+      try {
+        // Fetch therapist data from Supabase
+        const { data: therapistData, error: therapistError } = await window.supabase
+          .from('therapist_profiles')
+          .select('id, first_name, last_name, email')
+          .eq('id', bookingData.therapist_id)
+          .single();
+        
+        if (therapistData && !therapistError) {
+          console.log('📧 Therapist data found:', therapistData);
+          therapistEmailResult = await window.EmailService.sendTherapistBookingRequest(
+            emailData, 
+            therapistData, 
+            60 // 60 minute timeout
+          );
+        } else {
+          console.error('❌ Error fetching therapist data:', therapistError);
+          therapistEmailResult = { success: false, error: 'Could not fetch therapist data' };
+        }
+      } catch (error) {
+        console.error('❌ Error sending therapist email:', error);
+        therapistEmailResult = { success: false, error: error.message };
+      }
     }
+    
+    // Return combined results
+    const results = {
+      success: clientEmailResult.success,
+      clientEmail: clientEmailResult,
+      therapistEmail: therapistEmailResult,
+      therapistEmailSent: therapistEmailResult.success
+    };
+    
+    console.log('📧 Email notification results:', results);
+    return results;
     
   } catch (error) {
     console.error('❌ Error in sendBookingNotifications:', error);
@@ -1805,11 +1839,11 @@ if (confirmBtn) {
     
     // Show appropriate success message based on email results
     if (emailResult.success) {
-      if (emailResult.therapistEmail) {
+      if (emailResult.therapistEmailSent) {
         alert('Your booking request has been submitted successfully!\n\n' +
               '✅ Confirmation email sent to you\n' +
               '✅ Request sent to your selected therapist\n\n' +
-              'You will receive an update within ' + (timeoutMinutes || 60) + ' minutes.');
+              'You will receive an update within 60 minutes.');
       } else {
         alert('Your booking request has been submitted successfully!\n' +
               'You will receive a confirmation email shortly.');
