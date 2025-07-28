@@ -38,12 +38,6 @@ function calculateTherapistFee(dateVal, timeVal, durationVal) {
   return Math.round(fee * 100) / 100;
 }
 
-// EmailJS configuration - will be set from environment variables
-let EMAILJS_SERVICE_ID = 'service_puww2kb';
-let EMAILJS_TEMPLATE_ID = 'template_ai9rrg6'; // Client booking confirmation template
-let EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = 'template_51wt6of'; // New therapist booking request template
-let EMAILJS_PUBLIC_KEY = 'qfM_qA664E4JddSMN';
-
 // Initialize EmailJS when the script loads
 (function() {
     // Wait for EmailJS to be available
