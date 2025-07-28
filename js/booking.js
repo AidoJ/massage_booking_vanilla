@@ -1933,4 +1933,3 @@ if (confirmBtn) {
       alert('Your booking request has been submitted successfully!\n' +
             'However, there was an issue sending email notifications. We will contact you directly.');
     }
-*/
