@@ -163,6 +163,8 @@ async function handleBookingAccept(booking, therapist, headers) {
       updated_at: new Date().toISOString()
     };
 
+    console.log('📝 Updating booking with data:', JSON.stringify(updateData, null, 2));
+
     const { error: updateError } = await supabase
       .from('bookings')
       .update(updateData)
@@ -173,14 +175,35 @@ async function handleBookingAccept(booking, therapist, headers) {
       throw new Error('Failed to confirm booking');
     }
 
+    console.log('✅ Booking status updated successfully');
+
     // Add status history record
-    await addStatusHistory(booking.id, 'confirmed', therapist.id);
+    try {
+      await addStatusHistory(booking.id, 'confirmed', therapist.id);
+      console.log('✅ Status history added');
+    } catch (historyError) {
+      console.error('❌ Error adding status history:', historyError);
+      // Don't fail the whole process for this
+    }
 
     // Send confirmation emails
-    await Promise.all([
-      sendClientConfirmationEmail(booking, therapist),
-      sendTherapistConfirmationEmail(booking, therapist)
-    ]);
+    console.log('📧 Starting to send confirmation emails...');
+    
+    try {
+      await sendClientConfirmationEmail(booking, therapist);
+      console.log('✅ Client confirmation email sent successfully');
+    } catch (clientEmailError) {
+      console.error('❌ Error sending client confirmation email:', clientEmailError);
+      // Continue with therapist email even if client email fails
+    }
+
+    try {
+      await sendTherapistConfirmationEmail(booking, therapist);
+      console.log('✅ Therapist confirmation email sent successfully');
+    } catch (therapistEmailError) {
+      console.error('❌ Error sending therapist confirmation email:', therapistEmailError);
+      // Continue even if therapist email fails
+    }
 
     // Get service name for display
     const serviceName = booking.services?.name || 'Massage Service';
@@ -375,6 +398,10 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
 // Email sending functions
 async function sendClientConfirmationEmail(booking, therapist) {
   try {
+    console.log('📧 Starting client confirmation email...');
+    console.log('📧 Booking data:', JSON.stringify(booking, null, 2));
+    console.log('📧 Therapist data:', JSON.stringify(therapist, null, 2));
+
     const templateParams = {
       to_email: booking.customer_email,
       to_name: `${booking.first_name} ${booking.last_name}`,
@@ -389,16 +416,24 @@ async function sendClientConfirmationEmail(booking, therapist) {
       estimated_price: booking.price ? `$${booking.price.toFixed(2)}` : 'N/A'
     };
 
-    await sendEmail(EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID, templateParams);
-    console.log(`📧 Confirmation email sent to client: ${booking.customer_email}`);
+    console.log('📧 Client confirmation template params:', JSON.stringify(templateParams, null, 2));
+    console.log('📧 Using template ID:', EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID);
+
+    const result = await sendEmail(EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID, templateParams);
+    console.log(`📧 Confirmation email sent to client: ${booking.customer_email}`, result);
 
   } catch (error) {
     console.error('❌ Error sending client confirmation email:', error);
+    throw error;
   }
 }
 
 async function sendTherapistConfirmationEmail(booking, therapist) {
   try {
+    console.log('📧 Starting therapist confirmation email...');
+    console.log('📧 Booking data:', JSON.stringify(booking, null, 2));
+    console.log('📧 Therapist data:', JSON.stringify(therapist, null, 2));
+
     const templateParams = {
       to_email: therapist.email,
       to_name: `${therapist.first_name} ${therapist.last_name}`,
@@ -415,11 +450,15 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
       therapist_fee: booking.therapist_fee ? `$${booking.therapist_fee.toFixed(2)}` : 'TBD'
     };
 
-    await sendEmail(EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID, templateParams);
-    console.log(`📧 Confirmation email sent to therapist: ${therapist.email}`);
+    console.log('📧 Therapist confirmation template params:', JSON.stringify(templateParams, null, 2));
+    console.log('📧 Using template ID:', EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID);
+
+    const result = await sendEmail(EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID, templateParams);
+    console.log(`📧 Confirmation email sent to therapist: ${therapist.email}`, result);
 
   } catch (error) {
     console.error('❌ Error sending therapist confirmation email:', error);
+    throw error;
   }
 }
 
@@ -534,26 +573,38 @@ async function addStatusHistory(bookingId, status, userId) {
 // Helper function to send emails via EmailJS
 async function sendEmail(templateId, templateParams) {
   try {
-    const response = await fetch(`https://api.emailjs.com/api/v1.0/email/send`, {
+    // EmailJS API requires specific structure
+    const emailData = {
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: templateId,
+      user_id: EMAILJS_PUBLIC_KEY,
+      template_params: templateParams
+    };
+
+    console.log('📧 Sending email with data:', JSON.stringify(emailData, null, 2));
+
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        service_id: EMAILJS_SERVICE_ID,
-        template_id: templateId,
-        user_id: EMAILJS_PUBLIC_KEY,
-        template_params: templateParams
-      })
+      body: JSON.stringify(emailData)
     });
 
+    const responseText = await response.text();
+    console.log('📧 EmailJS response status:', response.status);
+    console.log('📧 EmailJS response text:', responseText);
+
     if (!response.ok) {
-      console.error('EmailJS error:', await response.text());
+      console.error('❌ EmailJS error:', response.status, responseText);
+      throw new Error(`EmailJS error: ${response.status} - ${responseText}`);
     } else {
-      console.log('✅ Email sent successfully');
+      console.log('✅ Email sent successfully via EmailJS API');
+      return { success: true, response: responseText };
     }
   } catch (error) {
     console.error('❌ Error sending email:', error);
+    throw error;
   }
 }
 
