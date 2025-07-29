@@ -186,15 +186,17 @@ async function handleBookingAccept(booking, therapist, headers) {
       // Don't fail the whole process for this
     }
 
-    // Send confirmation emails
+    // Send confirmation emails (but don't fail if they don't send)
     console.log('📧 Starting to send confirmation emails...');
+    
+    let emailErrors = [];
     
     try {
       await sendClientConfirmationEmail(booking, therapist);
       console.log('✅ Client confirmation email sent successfully');
     } catch (clientEmailError) {
       console.error('❌ Error sending client confirmation email:', clientEmailError);
-      // Continue with therapist email even if client email fails
+      emailErrors.push('Client confirmation email failed');
     }
 
     try {
@@ -202,13 +204,13 @@ async function handleBookingAccept(booking, therapist, headers) {
       console.log('✅ Therapist confirmation email sent successfully');
     } catch (therapistEmailError) {
       console.error('❌ Error sending therapist confirmation email:', therapistEmailError);
-      // Continue even if therapist email fails
+      emailErrors.push('Therapist confirmation email failed');
     }
 
     // Get service name for display
     const serviceName = booking.services?.name || 'Massage Service';
 
-    // Return success page
+    // Return success page (even if emails failed)
     return {
       statusCode: 200,
       headers,
@@ -221,7 +223,8 @@ async function handleBookingAccept(booking, therapist, headers) {
           `Date: ${new Date(booking.booking_time).toLocaleString()}`,
           `Location: ${booking.address}`,
           `Room: ${booking.room_number || 'N/A'}`,
-          `Your Fee: $${booking.therapist_fee || 'TBD'}`
+          `Your Fee: $${booking.therapist_fee || 'TBD'}`,
+          ...(emailErrors.length > 0 ? [`Note: ${emailErrors.join(', ')}`] : [])
         ]
       )
     };
