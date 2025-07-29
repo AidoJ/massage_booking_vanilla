@@ -185,6 +185,12 @@
           <div id="emailStatus" style="font-size:0.9rem; margin-top:4px;"></div>
         </div>
         
+        <!-- Customer lookup result display -->
+        <div id="customerLookupResult" style="display:none; background:#e8f5e8; border:1px solid #4caf50; padding:12px; border-radius:5px; margin:10px 0;">
+          <div style="font-weight:600; color:#2e7d32;">Welcome back!</div>
+          <div id="customerInfo" style="margin-top:4px;"></div>
+        </div>
+        
         <!-- Registration option (shown for new customers) -->
         <div id="registrationOption" class="form-group" style="display:none;">
           <label for="customerCode" style="font-weight:600; margin-bottom:8px; display:block;">Customer Code (if you have one)</label>
@@ -208,6 +214,12 @@
         <div class="form-group">
           <label for="customerPhone" style="font-weight:600; margin-bottom:8px; display:block;">Phone Number *</label>
           <input type="tel" id="customerPhone" placeholder="Phone Number" required />
+        </div>
+        
+        <!-- Customer code display -->
+        <div id="customerCodeDisplay" style="display:none; background:#f0f8ff; border:1px solid #007e8c; padding:10px; border-radius:5px; margin-top:10px;">
+          <div style="font-weight:600; color:#007e8c;">Your Customer ID:</div>
+          <div id="customerCodeText" style="font-family:monospace; font-size:1.1rem; margin-top:4px;"></div>
         </div>
         
         <div class="button-group">
