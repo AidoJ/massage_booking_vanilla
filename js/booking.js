@@ -603,8 +603,7 @@ console.log('Globals:', {
         initAutocomplete();
       } else {
         console.error('❌ Google Maps API still not available after window load');
-        const statusDiv = document.getElementById('address-autocomplete-status');
-        if (statusDiv) statusDiv.textContent = 'Google Maps script failed to load. Please check your internet connection and API key.';
+        // Remove status message
       }
     });
   }
@@ -649,25 +648,21 @@ function initAutocomplete() {
   
   if (!addressInput) {
     console.error('❌ Address input element not found');
-    if (statusDiv) statusDiv.textContent = 'Address input not found.';
     return;
   }
   
   if (!window.google) {
     console.error('❌ Google Maps API not loaded');
-    if (statusDiv) statusDiv.textContent = 'Google Maps API not loaded. Please check your internet connection.';
     return;
   }
   
   if (!window.google.maps) {
     console.error('❌ Google Maps library not available');
-    if (statusDiv) statusDiv.textContent = 'Google Maps library not available.';
     return;
   }
   
   if (!window.google.maps.places) {
     console.error('❌ Google Places API not available');
-    if (statusDiv) statusDiv.textContent = 'Google Places API not available. Please check API key and billing.';
     return;
   }
   
@@ -699,26 +694,21 @@ function initAutocomplete() {
         addressInput.dataset.lat = selected.lat;
         addressInput.dataset.lng = selected.lng;
         addressInput.dataset.businessName = selected.name;
-        if (statusDiv) statusDiv.textContent = 'Address selected!';
         console.log('✅ Address selected:', selected);
         checkTherapistCoverageForAddress();
       } else {
         console.warn('⚠️ Place selected but no geometry available');
-        if (statusDiv) statusDiv.textContent = 'Please select an address from the dropdown.';
       }
     });
     
-    if (statusDiv) statusDiv.textContent = 'Google Maps Autocomplete ready! Start typing your address...';
     console.log('✅ Google Maps Autocomplete initialized successfully');
     autocompleteInitialized = true;
     
   } catch (error) {
     console.error('❌ Error initializing Google Maps Autocomplete:', error);
-    if (statusDiv) statusDiv.textContent = 'Error initializing address autocomplete: ' + error.message;
     
     // Fallback: Allow manual address entry
     console.log('🔄 Setting up manual address entry fallback...');
-    if (statusDiv) statusDiv.textContent = 'Address autocomplete unavailable. You can still enter your address manually.';
     
     // Add manual address validation
     addressInput.addEventListener('blur', function() {
@@ -827,12 +817,9 @@ async function checkTherapistGenderAvailability() {
   let genderedTherapists = coveredTherapists;
   if (genderVal !== 'any') genderedTherapists = coveredTherapists.filter(t => t.gender === genderVal);
   if (genderedTherapists.length === 0) {
-    if (genderVal === 'male') statusDiv.textContent = 'Sorry, we do not have any male therapists available.';
-    else if (genderVal === 'female') statusDiv.textContent = 'Sorry, we do not have any female therapists available.';
-    else statusDiv.textContent = 'Sorry, we do not have any therapists available.';
+    // Remove status messages
     disableContinueFromGender();
   } else {
-    statusDiv.textContent = '';
     enableContinueFromGender();
   }
 }
@@ -935,7 +922,7 @@ function renderTimeSlots(slots, selectedSlot) {
   if (!container) return;
   container.innerHTML = '';
   if (!slots.length) {
-    container.innerHTML = '<div style="color:#b00; font-size:0.95rem; margin-top:0.3rem;">No available slots</div>';
+    // Remove red error message - just show empty container
     return;
   }
   slots.forEach(slot => {
@@ -1057,15 +1044,7 @@ async function updateAvailableTimeSlots() {
   if (finalSlots.length === 0) {
     renderTimeSlots([], '');
     timeInput.value = '';
-    // Show error message
-    const container = document.getElementById('timeSlotsContainer');
-    if (container) {
-      if (genderVal !== 'any') {
-        container.innerHTML = `<div style='color:#b00; font-size:0.95rem; margin-top:0.3rem;'>Sorry we have no slots available for the ${genderVal === 'male' ? 'male' : 'female'} therapists in your area, please go back and change the setting to Any gender and try again.</div>`;
-      } else {
-        container.innerHTML = "<div style='color:#b00; font-size:0.95rem; margin-top:0.3rem;'>Sorry we have no therapists in your area available on that date, please try a different date.</div>";
-      }
-    }
+    // Remove red error messages - just leave container empty
   } else {
     renderTimeSlots(finalSlots, timeInput.value);
   }
@@ -1819,10 +1798,8 @@ if (confirmBtn) {
     }
 
     if (!data || data.length === 0) {
-      console.error('No booking data returned from insert');
-      alert('There was an error submitting your booking. Please try again.');
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Confirm and Request Booking';
+      // Remove status message
+      disableContinueFromAddress();
       return;
     }
 

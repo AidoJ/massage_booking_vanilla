@@ -54,7 +54,6 @@
           <input type="text" id="businessName" placeholder="e.g., Google HQ" />
         </div>
         <input id="address" autocomplete="off" placeholder="Start typing your address..." />
-        <div id="address-autocomplete-status" style="color:#b00; font-size:0.95rem; margin-top:0.3rem;"></div>
         <button class="btn next" data-next="step2">Continue</button>
       </div>
     </div>
@@ -106,7 +105,6 @@
               <input type="radio" name="genderPref" value="any" checked>
             </label>
           </div>
-          <div id="gender-availability-status" style="color:#b00; font-size:0.95rem; margin-top:0.3rem;"></div>
         </div>
         <div class="form-group" style="margin-top:18px;">
           <label style="font-weight:600; margin-bottom:8px; display:block;">
@@ -187,22 +185,11 @@
           <div id="emailStatus" style="font-size:0.9rem; margin-top:4px;"></div>
         </div>
         
-        <!-- Customer lookup result display -->
-        <div id="customerLookupResult" style="display:none; background:#e8f5e8; border:1px solid #4caf50; padding:12px; border-radius:5px; margin:10px 0;">
-          <div style="font-weight:600; color:#2e7d32;">Welcome back!</div>
-          <div id="customerInfo" style="margin-top:4px;"></div>
-        </div>
-        
         <!-- Registration option (shown for new customers) -->
         <div id="registrationOption" class="form-group" style="display:none;">
-          <label style="font-weight:600; margin-bottom:8px; display:block;">Would you like to register with us?</label>
-          <div id="registerOptionGroup" class="radio-group horizontal">
-            <label class="radio-inline"><input type="radio" name="registerOption" value="yes"> Yes, register me</label>
-            <label class="radio-inline"><input type="radio" name="registerOption" value="no" checked> No, continue as guest</label>
-          </div>
-          <div style="font-size:0.97rem; color:#007e8c; margin-top:4px; margin-bottom:8px;">
-            Registration saves your details for faster future bookings and gives you access to exclusive offers.
-          </div>
+          <label for="customerCode" style="font-weight:600; margin-bottom:8px; display:block;">Customer Code (if you have one)</label>
+          <input type="text" id="customerCode" placeholder="e.g., RJM123" />
+          <div id="customerCodeStatus" style="font-size:0.9rem; margin-top:4px;"></div>
         </div>
         
         <!-- Name fields -->
@@ -221,12 +208,6 @@
         <div class="form-group">
           <label for="customerPhone" style="font-weight:600; margin-bottom:8px; display:block;">Phone Number *</label>
           <input type="tel" id="customerPhone" placeholder="Phone Number" required />
-        </div>
-        
-        <!-- Customer code display -->
-        <div id="customerCodeDisplay" style="display:none; background:#f0f8ff; border:1px solid #007e8c; padding:10px; border-radius:5px; margin-top:10px;">
-          <div style="font-weight:600; color:#007e8c;">Your Customer ID:</div>
-          <div id="customerCodeText" style="font-family:monospace; font-size:1.1rem; margin-top:4px;"></div>
         </div>
         
         <div class="button-group">
