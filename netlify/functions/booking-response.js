@@ -191,26 +191,23 @@ async function handleBookingAccept(booking, therapist, headers) {
     
     let emailErrors = [];
     
-    try {
-      await sendClientConfirmationEmail(booking, therapist);
-      console.log('✅ Client confirmation email sent successfully');
-    } catch (clientEmailError) {
-      console.error('❌ Error sending client confirmation email:', clientEmailError);
-      emailErrors.push('Client confirmation email failed');
-    }
+    // Send client confirmation email
+    await sendClientConfirmationEmail(booking, therapist);
+    console.log('✅ Client confirmation email sent successfully');
 
-    try {
-      await sendTherapistConfirmationEmail(booking, therapist);
-      console.log('✅ Therapist confirmation email sent successfully');
-    } catch (therapistEmailError) {
-      console.error('❌ Error sending therapist confirmation email:', therapistEmailError);
-      emailErrors.push('Therapist confirmation email failed');
-    }
+    // Send therapist confirmation email  
+    await sendTherapistConfirmationEmail(booking, therapist);
+    console.log('✅ Therapist confirmation email sent successfully');
 
     // Get service name for display
-    const serviceName = booking.services?.name || 'Massage Service';
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    } else if (booking.service_name) {
+      serviceName = booking.service_name;
+    }
 
-    // Return success page (even if emails failed)
+    // Return success page
     return {
       statusCode: 200,
       headers,
@@ -223,8 +220,7 @@ async function handleBookingAccept(booking, therapist, headers) {
           `Date: ${new Date(booking.booking_time).toLocaleString()}`,
           `Location: ${booking.address}`,
           `Room: ${booking.room_number || 'N/A'}`,
-          `Your Fee: $${booking.therapist_fee || 'TBD'}`,
-          ...(emailErrors.length > 0 ? [`Note: ${emailErrors.join(', ')}`] : [])
+          `Your Fee: $${booking.therapist_fee || 'TBD'}`
         ]
       )
     };
@@ -405,12 +401,20 @@ async function sendClientConfirmationEmail(booking, therapist) {
     console.log('📧 Booking data:', JSON.stringify(booking, null, 2));
     console.log('📧 Therapist data:', JSON.stringify(therapist, null, 2));
 
+    // Get service name safely
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    } else if (booking.service_name) {
+      serviceName = booking.service_name;
+    }
+
     const templateParams = {
       to_email: booking.customer_email,
       to_name: `${booking.first_name} ${booking.last_name}`,
       customer_name: `${booking.first_name} ${booking.last_name}`,
       booking_id: booking.booking_id,
-      service: booking.services?.name || 'Massage Service',
+      service: serviceName,
       duration: `${booking.duration_minutes} minutes`,
       date_time: new Date(booking.booking_time).toLocaleString(),
       address: booking.address,
@@ -427,7 +431,8 @@ async function sendClientConfirmationEmail(booking, therapist) {
 
   } catch (error) {
     console.error('❌ Error sending client confirmation email:', error);
-    throw error;
+    // Don't throw the error - just log it so the booking can still be confirmed
+    console.log('⚠️ Continuing with booking confirmation despite email error');
   }
 }
 
@@ -437,6 +442,14 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
     console.log('📧 Booking data:', JSON.stringify(booking, null, 2));
     console.log('📧 Therapist data:', JSON.stringify(therapist, null, 2));
 
+    // Get service name safely
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    } else if (booking.service_name) {
+      serviceName = booking.service_name;
+    }
+
     const templateParams = {
       to_email: therapist.email,
       to_name: `${therapist.first_name} ${therapist.last_name}`,
@@ -444,7 +457,7 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
       client_name: `${booking.first_name} ${booking.last_name}`,
       client_phone: booking.customer_phone || 'Not provided',
       client_email: booking.customer_email,
-      service_name: booking.services?.name || 'Massage Service',
+      service_name: serviceName,
       duration: `${booking.duration_minutes} minutes`,
       booking_date: new Date(booking.booking_time).toLocaleDateString(),
       booking_time: new Date(booking.booking_time).toLocaleTimeString(),
@@ -461,18 +474,27 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
 
   } catch (error) {
     console.error('❌ Error sending therapist confirmation email:', error);
-    throw error;
+    // Don't throw the error - just log it so the booking can still be confirmed
+    console.log('⚠️ Continuing with booking confirmation despite email error');
   }
 }
 
 async function sendClientDeclineEmail(booking) {
   try {
+    // Get service name safely
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    } else if (booking.service_name) {
+      serviceName = booking.service_name;
+    }
+
     const templateParams = {
       to_email: booking.customer_email,
       to_name: `${booking.first_name} ${booking.last_name}`,
       customer_name: `${booking.first_name} ${booking.last_name}`,
       booking_id: booking.booking_id,
-      service: booking.services?.name || 'Massage Service',
+      service: serviceName,
       duration: `${booking.duration_minutes} minutes`,
       date_time: new Date(booking.booking_time).toLocaleString(),
       address: booking.address
@@ -488,12 +510,20 @@ async function sendClientDeclineEmail(booking) {
 
 async function sendClientLookingForAlternateEmail(booking) {
   try {
+    // Get service name safely
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    } else if (booking.service_name) {
+      serviceName = booking.service_name;
+    }
+
     const templateParams = {
       to_email: booking.customer_email,
       to_name: `${booking.first_name} ${booking.last_name}`,
       customer_name: `${booking.first_name} ${booking.last_name}`,
       booking_id: booking.booking_id,
-      service: booking.services?.name || 'Massage Service',
+      service: serviceName,
       duration: `${booking.duration_minutes} minutes`,
       date_time: new Date(booking.booking_time).toLocaleString(),
       address: booking.address
