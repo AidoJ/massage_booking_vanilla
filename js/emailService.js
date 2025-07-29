@@ -4,10 +4,10 @@ let EMAILJS_TEMPLATE_ID = 'template_ai9rrg6'; // Client booking confirmation tem
 let EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = 'template_51wt6of'; // Therapist booking request template
 
 // FIXED: Updated to match your documentation template IDs
-let EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = 'template_booking_confirmed'; // Client confirmation when accepted
-let EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = 'template_therapist_confirmed'; // Therapist confirmation when accepted
-let EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = 'template_booking_declined'; // Client notification when declined
-let EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = 'template_looking_alternate'; // Client notification when looking for alternate
+let EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = 'template_confirmed';
+let EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = 'template_therapist_ok';
+let EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = 'template_declined';
+let EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = 'template_alternate';
 
 let EMAILJS_PUBLIC_KEY = 'qfM_qA664E4JddSMN';
 
