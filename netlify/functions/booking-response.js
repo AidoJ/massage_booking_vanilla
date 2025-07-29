@@ -5,15 +5,22 @@ const supabaseUrl = process.env.SUPABASE_URL || 'https://dcukfurezlkagvvwgsgr.su
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjdWtmdXJlemxrYWd2dndnc2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MjM0NjQsImV4cCI6MjA2NzQ5OTQ2NH0.ThXQKNHj0XpSkPa--ghmuRXFJ7nfcf0YVlH0liHofFw';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// EmailJS configuration
+// EmailJS configuration - MATCHING emailService.js
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || 'service_puww2kb';
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || 'template_ai9rrg6';
 const EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID || 'template_51wt6of';
-const EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID || 'template_confirmed';
-const EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID || 'template_therapist_ok';
-const EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_DECLINED_TEMPLATE_ID || 'template_declined';
-const EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = process.env.EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID || 'template_alternate';
+const EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID || 'template_ai9rrg6';
+const EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID || 'template_ai9rrg6';
+const EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_DECLINED_TEMPLATE_ID || 'template_ai9rrg6';
+const EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = process.env.EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID || 'template_ai9rrg6';
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
+
+// Debug logging for template IDs
+console.log('🔧 EmailJS Configuration:');
+console.log('Service ID:', EMAILJS_SERVICE_ID);
+console.log('Public Key:', EMAILJS_PUBLIC_KEY);
+console.log('Booking Confirmed Template:', EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID);
+console.log('Therapist Confirmed Template:', EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID);
 
 exports.handler = async (event, context) => {
   // Enable CORS
@@ -189,15 +196,23 @@ async function handleBookingAccept(booking, therapist, headers) {
     // Send confirmation emails (but don't fail if they don't send)
     console.log('📧 Starting to send confirmation emails...');
     
-    let emailErrors = [];
-    
     // Send client confirmation email
-    await sendClientConfirmationEmail(booking, therapist);
-    console.log('✅ Client confirmation email sent successfully');
+    try {
+      await sendClientConfirmationEmail(booking, therapist);
+      console.log('✅ Client confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('❌ Error sending client confirmation email:', emailError);
+      // Continue with the process even if email fails
+    }
 
     // Send therapist confirmation email  
-    await sendTherapistConfirmationEmail(booking, therapist);
-    console.log('✅ Therapist confirmation email sent successfully');
+    try {
+      await sendTherapistConfirmationEmail(booking, therapist);
+      console.log('✅ Therapist confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('❌ Error sending therapist confirmation email:', emailError);
+      // Continue with the process even if email fails
+    }
 
     // Get service name for display
     let serviceName = 'Massage Service';
@@ -227,9 +242,9 @@ async function handleBookingAccept(booking, therapist, headers) {
 
   } catch (error) {
     console.error('❌ Error handling booking acceptance:', error);
-      return {
-        statusCode: 500,
-        headers,
+    return {
+      statusCode: 500,
+      headers,
       body: generateErrorPage('Error confirming booking. Please contact support immediately at 1300 302542.')
     };
   }
@@ -606,6 +621,9 @@ async function addStatusHistory(bookingId, status, userId) {
 // Helper function to send emails via EmailJS
 async function sendEmail(templateId, templateParams) {
   try {
+    console.log(`📧 Attempting to send email with template: ${templateId}`);
+    console.log(`📧 Template parameters:`, JSON.stringify(templateParams, null, 2));
+    
     // EmailJS API requires specific structure
     const emailData = {
       service_id: EMAILJS_SERVICE_ID,
@@ -614,7 +632,7 @@ async function sendEmail(templateId, templateParams) {
       template_params: templateParams
     };
 
-    console.log('📧 Sending email with data:', JSON.stringify(emailData, null, 2));
+    console.log('📧 EmailJS request data:', JSON.stringify(emailData, null, 2));
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
@@ -637,6 +655,8 @@ async function sendEmail(templateId, templateParams) {
     }
   } catch (error) {
     console.error('❌ Error sending email:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
     throw error;
   }
 }

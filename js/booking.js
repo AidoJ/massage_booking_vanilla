@@ -727,17 +727,57 @@ async function checkTherapistCoverageForAddress() {
   const address = addressInput.value;
   const statusDiv = document.getElementById('address-autocomplete-status');
   if (!address) return;
-  // Use Google Maps Geocoding API to get coordinates (if not already set)
-  // For this example, assume coordinates are set by autocomplete
-  const lat = addressInput.dataset.lat ? Number(addressInput.dataset.lat) : null;
-  const lng = addressInput.dataset.lng ? Number(addressInput.dataset.lng) : null;
-  if (!lat || !lng) return;
+  
+  // Get coordinates from autocomplete or geocode manually
+  let lat = addressInput.dataset.lat ? Number(addressInput.dataset.lat) : null;
+  let lng = addressInput.dataset.lng ? Number(addressInput.dataset.lng) : null;
+  
+  // If coordinates not set by autocomplete, try to geocode manually
+  if (!lat || !lng) {
+    try {
+      console.log('🔍 Geocoding address manually:', address);
+      const geocoder = new google.maps.Geocoder();
+      const result = await new Promise((resolve, reject) => {
+        geocoder.geocode({ address: address, componentRestrictions: { country: 'au' } }, (results, status) => {
+          if (status === 'OK' && results && results[0]) {
+            resolve(results[0]);
+          } else {
+            reject(new Error('Geocoding failed'));
+          }
+        });
+      });
+      
+      lat = result.geometry.location.lat();
+      lng = result.geometry.location.lng();
+      
+      // Store coordinates for future use
+      addressInput.dataset.lat = lat;
+      addressInput.dataset.lng = lng;
+      
+      console.log('✅ Address geocoded successfully:', { lat, lng });
+    } catch (error) {
+      console.error('❌ Geocoding failed:', error);
+      statusDiv.textContent = "Unable to verify address location. Please try selecting from the dropdown suggestions.";
+      disableContinueFromAddress();
+      return;
+    }
+  }
+  
+  if (!lat || !lng) {
+    console.error('❌ No coordinates available for address');
+    return;
+  }
   // Fetch all active therapists with lat/lng and service_radius_km
   let { data, error } = await window.supabase
     .from('therapist_profiles')
     .select('id, latitude, longitude, service_radius_km, is_active')
     .eq('is_active', true);
+  
+  console.log('🔍 Checking therapist coverage for coordinates:', { lat, lng });
+  console.log('📊 Found therapists:', data?.length || 0);
+  
   if (!data || data.length === 0) {
+    console.log('❌ No active therapists found in database');
     statusDiv.textContent = "Sorry, we don't have any therapists servicing your area at the moment.";
     disableContinueFromAddress();
     return;
@@ -755,10 +795,17 @@ async function checkTherapistCoverageForAddress() {
     return R * c;
   }
   const covered = data.some(t => {
-    if (t.latitude == null || t.longitude == null || t.service_radius_km == null) return false;
+    if (t.latitude == null || t.longitude == null || t.service_radius_km == null) {
+      console.log('⚠️ Therapist missing location data:', t.id);
+      return false;
+    }
     const dist = getDistanceKm(lat, lng, t.latitude, t.longitude);
+    console.log(`📍 Therapist ${t.id}: distance ${dist.toFixed(2)}km, radius ${t.service_radius_km}km`);
     return dist <= t.service_radius_km;
   });
+  
+  console.log('✅ Coverage check result:', covered);
+  
   if (!covered) {
     statusDiv.textContent = "Sorry, we don't have any therapists servicing your area at the moment.";
     disableContinueFromAddress();
@@ -790,7 +837,12 @@ async function checkTherapistGenderAvailability() {
     .from('therapist_profiles')
     .select('id, latitude, longitude, service_radius_km, is_active, gender')
     .eq('is_active', true);
+  
+  console.log('🔍 Checking gender availability for coordinates:', { lat, lng, gender: genderVal });
+  console.log('📊 Found therapists:', data?.length || 0);
+  
   if (!data || data.length === 0) {
+    console.log('❌ No active therapists found in database');
     statusDiv.textContent = 'Sorry, we do not have any therapists available.';
     disableContinueFromGender();
     return;
@@ -809,17 +861,31 @@ async function checkTherapistGenderAvailability() {
   }
   // Filter therapists by geolocation
   const coveredTherapists = data.filter(t => {
-    if (t.latitude == null || t.longitude == null || t.service_radius_km == null) return false;
+    if (t.latitude == null || t.longitude == null || t.service_radius_km == null) {
+      console.log('⚠️ Therapist missing location data:', t.id);
+      return false;
+    }
     const dist = getDistanceKm(lat, lng, t.latitude, t.longitude);
+    console.log(`📍 Therapist ${t.id} (${t.gender}): distance ${dist.toFixed(2)}km, radius ${t.service_radius_km}km`);
     return dist <= t.service_radius_km;
   });
+  
+  console.log('✅ Therapists in coverage area:', coveredTherapists.length);
+  
   // Filter by gender (if not 'any')
   let genderedTherapists = coveredTherapists;
-  if (genderVal !== 'any') genderedTherapists = coveredTherapists.filter(t => t.gender === genderVal);
+  if (genderVal !== 'any') {
+    genderedTherapists = coveredTherapists.filter(t => t.gender === genderVal);
+    console.log(`✅ Therapists matching gender preference (${genderVal}):`, genderedTherapists.length);
+  }
+  
   if (genderedTherapists.length === 0) {
-    // Remove status messages
+    console.log('❌ No therapists available for selected criteria');
+    statusDiv.textContent = 'Sorry, we do not have any therapists available for your preferences.';
     disableContinueFromGender();
   } else {
+    console.log('✅ Therapists available for booking');
+    statusDiv.textContent = '';
     enableContinueFromGender();
   }
 }

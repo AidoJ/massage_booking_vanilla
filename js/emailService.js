@@ -2,10 +2,10 @@
 let EMAILJS_SERVICE_ID = 'service_puww2kb';
 let EMAILJS_TEMPLATE_ID = 'template_ai9rrg6'; // Client booking confirmation template
 let EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = 'template_51wt6of'; // Therapist booking request template
-let EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = 'template_confirmed'; // Booking confirmed template
-let EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = 'template_therapist_ok'; // Therapist confirmed template
-let EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = 'template_declined'; // Booking declined template
-let EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = 'template_alternate'; // Looking for alternate template
+let EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = 'template_ai9rrg6'; // Booking confirmed template
+let EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = 'template_ai9rrg6'; // Therapist confirmed template
+let EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = 'template_ai9rrg6'; // Booking declined template
+let EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = 'template_ai9rrg6'; // Looking for alternate template
 let EMAILJS_PUBLIC_KEY = 'qfM_qA664E4JddSMN';
 
 // Initialize EmailJS when the script loads

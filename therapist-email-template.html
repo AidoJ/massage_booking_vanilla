@@ -1,90 +1,267 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Booking Request</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background-color: white; }
-        .header { background-color: #008e8c; color: white; padding: 30px 20px; text-align: center; }
-        .content { padding: 30px 20px; }
-        .booking-details { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #008e8c; }
-        .fee-details { background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
-        .action-buttons { text-align: center; margin: 30px 0; }
-        .btn { display: inline-block; padding: 12px 30px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
-        .btn-accept { background-color: #28a745; color: white; }
-        .btn-decline { background-color: #dc3545; color: white; }
-        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
-        .urgent { color: #dc3545; font-weight: bold; }
-        .highlight { color: #008e8c; font-weight: bold; }
-    </style>
+    <title>Booking Request Confirmation</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>New Booking Request</h1>
-            <p>Action Required - Please Respond Promptly</p>
-        </div>
-        
-        <div class="content">
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                Dear <span class="highlight">{{therapist_name}}</span>,
-            </p>
-            
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                You have received a new booking request that matches your availability and service offerings. 
-                This is an excellent opportunity to provide your professional massage therapy services.
-            </p>
-            
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                <span class="urgent">⚠️ IMPORTANT:</span> Please respond within 
-                <strong>{{response_timeout_minutes}} minutes</strong> to secure this booking.
-            </p>
-            
-            <div class="booking-details">
-                <h3 style="color: #008e8c; margin-top: 0;">📋 Booking Summary</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr><td style="padding: 8px 0;"><strong>Booking ID:</strong></td><td style="padding: 8px 0;">{{booking_id}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Customer Code:</strong></td><td style="padding: 8px 0;">{{customer_code}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Customer Name:</strong></td><td style="padding: 8px 0;">{{customer_name}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Customer Email:</strong></td><td style="padding: 8px 0;">{{customer_email}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Business Name:</strong></td><td style="padding: 8px 0;">{{business_name}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Address:</strong></td><td style="padding: 8px 0;">{{address}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Service:</strong></td><td style="padding: 8px 0;">{{service}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Duration:</strong></td><td style="padding: 8px 0;">{{duration}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Date & Time:</strong></td><td style="padding: 8px 0;">{{date_time}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Gender Preference:</strong></td><td style="padding: 8px 0;">{{gender_preference}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Parking:</strong></td><td style="padding: 8px 0;">{{parking}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Room Number:</strong></td><td style="padding: 8px 0;">{{room_number}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Booker Name:</strong></td><td style="padding: 8px 0;">{{booker_name}}</td></tr>
-                    <tr><td style="padding: 8px 0;"><strong>Notes:</strong></td><td style="padding: 8px 0;">{{notes}}</td></tr>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;">
+    <!-- EmailJS Recipient Fields - DO NOT CHANGE -->
+    <input type="hidden" name="to_email" value="{{to_email}}" />
+    <input type="hidden" name="to_name" value="{{to_name}}" />
+    <input type="hidden" name="from_name" value="Rejuvenators Mobile Massage" />
+    <input type="hidden" name="reply_to" value="info@rejuvenators.com" />
+    
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa;">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #007e8c 0%, #005a7a 100%); color: white; padding: 40px 30px; text-align: center;">
+                            <div style="margin-bottom: 20px;">
+                                <div style="font-size: 32px; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px;">REJUVENATORS®</div>
+                                <div style="font-size: 16px; font-style: italic; opacity: 0.9;">Mobile Massage</div>
+                            </div>
+                            <h2 style="font-size: 28px; font-weight: 600; margin: 0 0 10px 0;">New Booking Request Received</h2>
+                            <p style="font-size: 16px; opacity: 0.9; margin: 0;">Thank you for choosing Rejuvenators Mobile Massage</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            
+                            <!-- Welcome Section -->
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <h3 style="color: #007e8c; font-size: 22px; margin: 0 0 15px 0; font-weight: 600;">Hello {{customer_name}}!</h3>
+                                <p style="font-size: 16px; color: #666; margin: 0 0 20px 0; line-height: 1.6;">Your booking request has been successfully received and is now being processed. We're excited to help you relax and rejuvenate!</p>
+                            </div>
+                            
+                            <!-- Booking Details -->
+                            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; padding: 30px; margin: 30px 0; border-left: 4px solid #007e8c;">
+                                <h4 style="color: #007e8c; font-size: 20px; margin: 0 0 25px 0; font-weight: 600;">📋 Booking Details</h4>
+                                
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Booking ID:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{booking_id}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Customer Code:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{customer_code}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Business Name:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{business_name}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Address:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{address}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Service:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{service}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Duration:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{duration}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Gender Preference:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{gender_preference}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Date & Time:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{date_time}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Parking:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{parking}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Therapist:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{therapist}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Customer Name:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{customer_name}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Email:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{customer_email}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Phone:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{phone}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Room Number:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{room_number}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e9ecef;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Booker Name:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{booker_name}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #495057; font-size: 14px; width: 180px;">Notes:</td>
+                                                    <td style="color: #333; font-size: 14px; text-align: right;">{{notes}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Pricing Information -->
+                            <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 2px solid #007e8c; border-radius: 12px; padding: 25px; margin: 25px 0;">
+                                <h4 style="color: #007e8c; font-size: 18px; margin: 0 0 15px 0; font-weight: 600;">💰 Pricing Information</h4>
+                                
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="padding: 8px 0; border-bottom: 1px solid rgba(0, 126, 140, 0.2);">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #007e8c; font-size: 14px;">Amended Price:</td>
+                                                    <td style="color: #007e8c; font-size: 16px; font-weight: 600; text-align: right;">{{estimated_price}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="font-weight: 600; color: #007e8c; font-size: 14px;">Base Price:</td>
+                                                    <td style="color: #007e8c; font-size: 16px; font-weight: 600; text-align: right;">{{base_price}}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Next Steps -->
+                            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                                <h4 style="color: #856404; font-size: 16px; margin: 0 0 10px 0; font-weight: 600;">⏰ What happens next?</h4>
+                                <ul style="color: #856404; font-size: 14px; padding-left: 20px; margin: 0;">
+                                    <li style="margin-bottom: 5px;">We'll review your booking request and confirm availability</li>
+                                    <li style="margin-bottom: 5px;">Our therapist will be notified of your booking</li>
+                                    <li style="margin-bottom: 5px;">You'll receive a confirmation email once everything is confirmed</li>
+                                    <li style="margin-bottom: 5px;">We'll send you a reminder 24 hours before your appointment</li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                            <p style="color: #666; font-size: 14px; margin: 0 0 10px 0;">Thank you for booking with <span style="color: #007e8c; font-weight: 600; font-size: 16px;">Rejuvenators Mobile Massage</span>.</p>
+                            <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">We will contact you shortly to confirm your booking.</p>
+                            <div style="color: #007e8c; font-weight: 600; margin-top: 15px;">
+                                📧 info@rejuvenators.com | 📞 1300 REJUVENATE
+                            </div>
+                        </td>
+                    </tr>
+                    
                 </table>
-            </div>
-            
-            <div class="fee-details">
-                <h3 style="color: #28a745; margin-top: 0;">💰 Your Earnings</h3>
-                <p style="font-size: 18px; font-weight: bold; color: #28a745; text-align: center; margin: 10px 0;">
-                    ${{therapist_fee}}
-                </p>
-            </div>
-            
-            <div class="action-buttons">
-                <h3 style="color: #008e8c;">Please Respond:</h3>
-                <a href="{{accept_url}}" class="btn btn-accept">✅ ACCEPT BOOKING</a>
-                <a href="{{decline_url}}" class="btn btn-decline">❌ DECLINE BOOKING</a>
-            </div>
-            
-            <p style="font-size: 14px; color: #6c757d; text-align: center; margin-top: 20px;">
-                <strong>Note:</strong> If you accept this booking, you will receive a confirmation email with all the details. 
-                If you decline, the system will automatically offer this booking to other available therapists.
-            </p>
-        </div>
-        
-        <div class="footer">
-            <p>This is an automated message from the Massage Booking System</p>
-            <p>If you have any questions, please contact support</p>
-        </div>
-    </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html> 
