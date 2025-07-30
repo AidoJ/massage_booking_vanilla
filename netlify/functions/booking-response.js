@@ -1,5 +1,16 @@
 const { createClient } = require('@supabase/supabase-js');
 
+/*
+ * Booking Response Handler - Accept/Decline Therapist Responses
+ * 
+ * Database Columns Used:
+ * - therapist_id: Originally assigned therapist
+ * - responding_therapist_id: Therapist who actually responded (may differ if alternative assigned)
+ * - therapist_response_time: When the response was received
+ * - status: 'requested' -> 'confirmed' or 'declined'
+ * - updated_at: Auto-updated by database trigger
+ */
+
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || 'https://dcukfurezlkagvvwgsgr.supabase.co';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjdWtmdXJlemxrYWd2dndnc2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MjM0NjQsImV4cCI6MjA2NzQ5OTQ2NH0.ThXQKNHj0XpSkPa--ghmuRXFJ7nfcf0YVlH0liHofFw';
@@ -161,13 +172,15 @@ exports.handler = async (event, context) => {
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log(`✅ Processing booking acceptance: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
+    console.log(`📊 Original therapist: ${booking.therapist_id}, Responding therapist: ${therapist.id}`);
 
-    // FIXED: Remove the non-existent column 'responding_therapist_id'
+    // Update booking status with full tracking
+    // Note: therapist_id = originally assigned, responding_therapist_id = who actually responded
     const updateData = {
       status: 'confirmed',
       therapist_response_time: new Date().toISOString(),
+      responding_therapist_id: therapist.id,
       updated_at: new Date().toISOString()
-      // REMOVED: responding_therapist_id (this column doesn't exist)
     };
 
     console.log('📝 Updating booking with data:', JSON.stringify(updateData, null, 2));
@@ -183,6 +196,15 @@ async function handleBookingAccept(booking, therapist, headers) {
     }
 
     console.log('✅ Booking status updated successfully');
+
+    // Verify the update worked by fetching the updated booking
+    const { data: updatedBooking } = await supabase
+      .from('bookings')
+      .select('status, therapist_response_time, responding_therapist_id, updated_at')
+      .eq('booking_id', booking.booking_id)
+      .single();
+    
+    console.log('📊 Updated booking fields:', updatedBooking);
 
     // Add status history record (use booking.id, not booking_id)
     try {
@@ -281,12 +303,23 @@ async function handleBookingDecline(booking, therapist, headers) {
     }
 
     // No alternative found or customer didn't want fallback
-    // FIXED: Remove the non-existent column here too
+    // Update booking status with full tracking  
     const updateData = {
       status: 'declined',
       therapist_response_time: new Date().toISOString(),
+      responding_therapist_id: therapist.id,
       updated_at: new Date().toISOString()
-      // REMOVED: responding_therapist_id
+    };
+
+    console.log(`❌ Processing booking decline: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
+    console.log(`📊 Original therapist: ${booking.therapist_id}, Responding therapist: ${therapist.id}`);
+
+    // Update booking status with full tracking  
+    const updateData = {
+      status: 'declined',
+      therapist_response_time: new Date().toISOString(),
+      responding_therapist_id: therapist.id,
+      updated_at: new Date().toISOString()
     };
 
     const { error: updateError } = await supabase
