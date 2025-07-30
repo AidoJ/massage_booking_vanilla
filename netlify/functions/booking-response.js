@@ -25,11 +25,13 @@ const EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_CO
 const EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_DECLINED_TEMPLATE_ID || 'template_declined';
 const EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = process.env.EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID || 'template_alternate';
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
+const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY; // Required for server-side calls
 
 // Debug logging for template IDs
 console.log('🔧 EmailJS Configuration:');
 console.log('Service ID:', EMAILJS_SERVICE_ID);
 console.log('Public Key:', EMAILJS_PUBLIC_KEY);
+console.log('Private Key:', EMAILJS_PRIVATE_KEY ? '✅ Configured' : '❌ Missing (required for server-side calls)');
 console.log('Booking Confirmed Template:', EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID);
 console.log('Therapist Confirmed Template:', EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID);
 
@@ -632,23 +634,33 @@ async function addStatusHistory(bookingId, status, userId) {
   }
 }
 
-// IMPROVED Email sending function with better error handling
+// IMPROVED Email sending function with private key authentication
 async function sendEmail(templateId, templateParams) {
   try {
     console.log(`📧 Sending email with template: ${templateId}`);
     console.log(`📧 Template parameters:`, JSON.stringify(templateParams, null, 2));
     
+    // Check if we have private key for server-side authentication
+    if (!EMAILJS_PRIVATE_KEY) {
+      console.warn('⚠️ No private key found. EmailJS strict mode requires private key for server-side calls.');
+      console.warn('💡 Add EMAILJS_PRIVATE_KEY to your Netlify environment variables');
+      return { success: false, error: 'Private key required for server-side EmailJS calls' };
+    }
+    
+    // Use private key for server-side authentication
     const emailData = {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
-      user_id: EMAILJS_PUBLIC_KEY,
+      user_id: EMAILJS_PRIVATE_KEY, // Use private key for server-side calls
       template_params: templateParams
     };
+
+    console.log('📧 Using private key authentication for server-side call');
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(emailData)
     });
