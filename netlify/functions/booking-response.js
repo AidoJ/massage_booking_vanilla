@@ -448,6 +448,8 @@ async function sendClientConfirmationEmail(booking, therapist) {
     console.error('❌ Error sending client confirmation email:', error);
     // Don't throw the error - just log it so the booking can still be confirmed
     console.log('⚠️ Continuing with booking confirmation despite email error');
+    // Return a success response even if email fails
+    return { success: false, error: error.message };
   }
 }
 
@@ -491,6 +493,8 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
     console.error('❌ Error sending therapist confirmation email:', error);
     // Don't throw the error - just log it so the booking can still be confirmed
     console.log('⚠️ Continuing with booking confirmation despite email error');
+    // Return a success response even if email fails
+    return { success: false, error: error.message };
   }
 }
 
@@ -648,7 +652,8 @@ async function sendEmail(templateId, templateParams) {
 
     if (!response.ok) {
       console.error('❌ EmailJS error:', response.status, responseText);
-      throw new Error(`EmailJS error: ${response.status} - ${responseText}`);
+      // Don't throw error, just return failure response
+      return { success: false, error: `EmailJS error: ${response.status} - ${responseText}` };
     } else {
       console.log('✅ Email sent successfully via EmailJS API');
       return { success: true, response: responseText };
@@ -657,7 +662,8 @@ async function sendEmail(templateId, templateParams) {
     console.error('❌ Error sending email:', error);
     console.error('❌ Error details:', error.message);
     console.error('❌ Error stack:', error.stack);
-    throw error;
+    // Don't throw error, just return failure response
+    return { success: false, error: error.message };
   }
 }
 
