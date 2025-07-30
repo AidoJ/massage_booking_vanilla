@@ -634,7 +634,7 @@ async function addStatusHistory(bookingId, status, userId) {
   }
 }
 
-// IMPROVED Email sending function with private key authentication
+// IMPROVED Email sending function with correct server-side authentication
 async function sendEmail(templateId, templateParams) {
   try {
     console.log(`📧 Sending email with template: ${templateId}`);
@@ -647,15 +647,26 @@ async function sendEmail(templateId, templateParams) {
       return { success: false, error: 'Private key required for server-side EmailJS calls' };
     }
     
-    // Use private key for server-side authentication
+    // Debug: Log the actual keys being used (first few chars only for security)
+    console.log('🔑 Using Public Key:', EMAILJS_PUBLIC_KEY?.substring(0, 10) + '...');
+    console.log('🔑 Using Private Key:', EMAILJS_PRIVATE_KEY?.substring(0, 10) + '...');
+    
+    // Correct server-side authentication: public key in user_id + private key as accessToken
     const emailData = {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
-      user_id: EMAILJS_PRIVATE_KEY, // Use private key for server-side calls
+      user_id: EMAILJS_PUBLIC_KEY, // Should be: qfM_qA664E4JddSMN
+      accessToken: EMAILJS_PRIVATE_KEY, // Private key goes here for server-side auth
       template_params: templateParams
     };
 
-    console.log('📧 Using private key authentication for server-side call');
+    console.log('📧 Using server-side authentication: Public Key + Private Access Token');
+    console.log('📧 API Call Structure:', {
+      service_id: emailData.service_id,
+      template_id: emailData.template_id,
+      user_id: emailData.user_id?.substring(0, 10) + '...',
+      accessToken: emailData.accessToken ? 'PROVIDED' : 'MISSING'
+    });
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
