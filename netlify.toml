@@ -6,17 +6,17 @@
   NODE_VERSION = "18"
 
 # Scheduled function for booking timeouts
-[[functions]]
+[functions]
   name = "booking-timeout-handler"
   path = "netlify/functions/booking-timeout-handler.js"
   schedule = "*/5 * * * *"  # Run every 5 minutes
 
-[[redirects]]
+[redirects]
   from = "/.netlify/functions/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-[[redirects]]
+[redirects]
   from = "/*"
   to = "/index.html"
   status = 200
