@@ -5,7 +5,7 @@ const supabaseUrl = process.env.SUPABASE_URL || 'https://dcukfurezlkagvvwgsgr.su
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjdWtmdXJlemxrYWd2dndnc2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MjM0NjQsImV4cCI6MjA2NzQ5OTQ2NH0.ThXQKNHj0XpSkPa--ghmuRXFJ7nfcf0YVlH0liHofFw';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// EmailJS configuration - MATCHING emailService.js
+// EmailJS configuration - MATCHING your actual template IDs
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || 'service_puww2kb';
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || 'template_ai9rrg6';
 const EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID || 'template_51wt6of';
@@ -41,7 +41,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Parse query parameters - UPDATED to match your email URL format
+    // Parse query parameters
     const params = new URLSearchParams(event.rawQuery || '');
     const action = params.get('action'); // 'accept' or 'decline'
     const bookingId = params.get('booking'); // booking_id string like 'RMM202501-0001'
@@ -66,7 +66,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Get booking details - UPDATED to use booking_id field (not id)
+    // Get booking details
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
@@ -74,7 +74,7 @@ exports.handler = async (event, context) => {
         services(*),
         customers(*)
       `)
-      .eq('booking_id', bookingId) // Use booking_id field, not id
+      .eq('booking_id', bookingId)
       .single();
 
     if (bookingError || !booking) {
@@ -104,7 +104,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if response is within timeout window - UPDATED to use system_settings
+    // Check if response is within timeout window
     const { data: timeoutSetting } = await supabase
       .from('system_settings')
       .select('value')
@@ -157,17 +157,17 @@ exports.handler = async (event, context) => {
   }
 };
 
-// Handle booking acceptance
+// Handle booking acceptance - FIXED DATABASE UPDATE
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log(`✅ Processing booking acceptance: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
 
-    // Update booking status
+    // FIXED: Remove the non-existent column 'responding_therapist_id'
     const updateData = {
       status: 'confirmed',
       therapist_response_time: new Date().toISOString(),
-      responding_therapist_id: therapist.id,
       updated_at: new Date().toISOString()
+      // REMOVED: responding_therapist_id (this column doesn't exist)
     };
 
     console.log('📝 Updating booking with data:', JSON.stringify(updateData, null, 2));
@@ -184,7 +184,7 @@ async function handleBookingAccept(booking, therapist, headers) {
 
     console.log('✅ Booking status updated successfully');
 
-    // Add status history record
+    // Add status history record (use booking.id, not booking_id)
     try {
       await addStatusHistory(booking.id, 'confirmed', therapist.id);
       console.log('✅ Status history added');
@@ -193,7 +193,7 @@ async function handleBookingAccept(booking, therapist, headers) {
       // Don't fail the whole process for this
     }
 
-    // Send confirmation emails (but don't fail if they don't send)
+    // Send confirmation emails (continue even if emails fail)
     console.log('📧 Starting to send confirmation emails...');
     
     // Send client confirmation email
@@ -281,11 +281,12 @@ async function handleBookingDecline(booking, therapist, headers) {
     }
 
     // No alternative found or customer didn't want fallback
+    // FIXED: Remove the non-existent column here too
     const updateData = {
       status: 'declined',
       therapist_response_time: new Date().toISOString(),
-      responding_therapist_id: therapist.id,
       updated_at: new Date().toISOString()
+      // REMOVED: responding_therapist_id
     };
 
     const { error: updateError } = await supabase
@@ -409,21 +410,18 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
   }
 }
 
-// Email sending functions
+// Email sending functions - IMPROVED ERROR HANDLING
 async function sendClientConfirmationEmail(booking, therapist) {
   try {
-    console.log('📧 Starting client confirmation email...');
-    console.log('📧 Booking data:', JSON.stringify(booking, null, 2));
-    console.log('📧 Therapist data:', JSON.stringify(therapist, null, 2));
+    console.log('📧 Preparing client confirmation email...');
 
     // Get service name safely
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
-    } else if (booking.service_name) {
-      serviceName = booking.service_name;
     }
 
+    // Prepare template parameters that match your EmailJS template
     const templateParams = {
       to_email: booking.customer_email,
       to_name: `${booking.first_name} ${booking.last_name}`,
@@ -438,38 +436,33 @@ async function sendClientConfirmationEmail(booking, therapist) {
       estimated_price: booking.price ? `$${booking.price.toFixed(2)}` : 'N/A'
     };
 
-    console.log('📧 Client confirmation template params:', JSON.stringify(templateParams, null, 2));
-    console.log('📧 Using template ID:', EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID);
+    console.log('📧 Client confirmation template params:', templateParams);
 
     const result = await sendEmail(EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID, templateParams);
-    console.log(`📧 Confirmation email sent to client: ${booking.customer_email}`, result);
+    console.log('📧 Client confirmation email result:', result);
+
+    return result;
 
   } catch (error) {
-    console.error('❌ Error sending client confirmation email:', error);
-    // Don't throw the error - just log it so the booking can still be confirmed
-    console.log('⚠️ Continuing with booking confirmation despite email error');
-    // Return a success response even if email fails
-    return { success: false, error: error.message };
+    console.error('❌ Error in sendClientConfirmationEmail:', error);
+    throw error;
   }
 }
 
 async function sendTherapistConfirmationEmail(booking, therapist) {
   try {
-    console.log('📧 Starting therapist confirmation email...');
-    console.log('📧 Booking data:', JSON.stringify(booking, null, 2));
-    console.log('📧 Therapist data:', JSON.stringify(therapist, null, 2));
+    console.log('📧 Preparing therapist confirmation email...');
 
     // Get service name safely
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
-    } else if (booking.service_name) {
-      serviceName = booking.service_name;
     }
 
     const templateParams = {
       to_email: therapist.email,
       to_name: `${therapist.first_name} ${therapist.last_name}`,
+      therapist_name: `${therapist.first_name} ${therapist.last_name}`,
       booking_id: booking.booking_id,
       client_name: `${booking.first_name} ${booking.last_name}`,
       client_phone: booking.customer_phone || 'Not provided',
@@ -483,29 +476,24 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
       therapist_fee: booking.therapist_fee ? `$${booking.therapist_fee.toFixed(2)}` : 'TBD'
     };
 
-    console.log('📧 Therapist confirmation template params:', JSON.stringify(templateParams, null, 2));
-    console.log('📧 Using template ID:', EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID);
+    console.log('📧 Therapist confirmation template params:', templateParams);
 
     const result = await sendEmail(EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID, templateParams);
-    console.log(`📧 Confirmation email sent to therapist: ${therapist.email}`, result);
+    console.log('📧 Therapist confirmation email result:', result);
+
+    return result;
 
   } catch (error) {
-    console.error('❌ Error sending therapist confirmation email:', error);
-    // Don't throw the error - just log it so the booking can still be confirmed
-    console.log('⚠️ Continuing with booking confirmation despite email error');
-    // Return a success response even if email fails
-    return { success: false, error: error.message };
+    console.error('❌ Error in sendTherapistConfirmationEmail:', error);
+    throw error;
   }
 }
 
 async function sendClientDeclineEmail(booking) {
   try {
-    // Get service name safely
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
-    } else if (booking.service_name) {
-      serviceName = booking.service_name;
     }
 
     const templateParams = {
@@ -529,12 +517,9 @@ async function sendClientDeclineEmail(booking) {
 
 async function sendClientLookingForAlternateEmail(booking) {
   try {
-    // Get service name safely
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
-    } else if (booking.service_name) {
-      serviceName = booking.service_name;
     }
 
     const templateParams = {
@@ -622,21 +607,18 @@ async function addStatusHistory(bookingId, status, userId) {
   }
 }
 
-// Helper function to send emails via EmailJS
+// IMPROVED Email sending function with better error handling
 async function sendEmail(templateId, templateParams) {
   try {
-    console.log(`📧 Attempting to send email with template: ${templateId}`);
+    console.log(`📧 Sending email with template: ${templateId}`);
     console.log(`📧 Template parameters:`, JSON.stringify(templateParams, null, 2));
     
-    // EmailJS API requires specific structure
     const emailData = {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
       user_id: EMAILJS_PUBLIC_KEY,
       template_params: templateParams
     };
-
-    console.log('📧 EmailJS request data:', JSON.stringify(emailData, null, 2));
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
@@ -648,26 +630,23 @@ async function sendEmail(templateId, templateParams) {
 
     const responseText = await response.text();
     console.log('📧 EmailJS response status:', response.status);
-    console.log('📧 EmailJS response text:', responseText);
+    console.log('📧 EmailJS response:', responseText);
 
     if (!response.ok) {
-      console.error('❌ EmailJS error:', response.status, responseText);
-      // Don't throw error, just return failure response
+      console.error('❌ EmailJS API error:', response.status, responseText);
       return { success: false, error: `EmailJS error: ${response.status} - ${responseText}` };
-    } else {
-      console.log('✅ Email sent successfully via EmailJS API');
-      return { success: true, response: responseText };
     }
+
+    console.log('✅ Email sent successfully');
+    return { success: true, response: responseText };
+
   } catch (error) {
     console.error('❌ Error sending email:', error);
-    console.error('❌ Error details:', error.message);
-    console.error('❌ Error stack:', error.stack);
-    // Don't throw error, just return failure response
     return { success: false, error: error.message };
   }
 }
 
-// HTML page generators (same as before)
+// HTML page generators
 function generateSuccessPage(title, message, details = []) {
   return `
 <!DOCTYPE html>
