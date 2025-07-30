@@ -5,18 +5,18 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Scheduled function for booking timeouts
-[functions]
-  name = "booking-timeout-handler"
-  path = "netlify/functions/booking-timeout-handler.js"
+# Define scheduled function settings
+[functions."booking-timeout-handler"]
   schedule = "*/5 * * * *"  # Run every 5 minutes
 
-[redirects]
+# Redirects for Netlify functions
+[[redirects]]
   from = "/.netlify/functions/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-[redirects]
+# Catch-all redirect to index.html for SPA routing
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
