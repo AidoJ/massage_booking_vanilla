@@ -1,4 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
+nconst { createClient } = require('@supabase/supabase-js');
 
 /*
  * Booking Response Handler - Accept/Decline Therapist Responses
@@ -293,7 +293,7 @@ async function handleBookingDecline(booking, therapist, headers) {
           statusCode: 200,
           headers,
           body: generateSuccessPage(
-            'Booking Declined - Alternative Found',
+            'Booking Declined - Alternative being selected.',
             `Thank you for your response, ${therapist.first_name}. We're contacting an alternative therapist for this booking.`,
             [
               `Booking: ${booking.booking_id}`,
