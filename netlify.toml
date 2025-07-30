@@ -1,9 +1,15 @@
-[build]
+  [build]
   publish = "."
   functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "18"
+
+# Scheduled function for booking timeouts
+[[functions]]
+  name = "booking-timeout-handler"
+  path = "netlify/functions/booking-timeout-handler.js"
+  schedule = "*/5 * * * *"  # Run every 5 minutes
 
 [[redirects]]
   from = "/.netlify/functions/*"
@@ -13,4 +19,4 @@
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200 
+  status = 200
