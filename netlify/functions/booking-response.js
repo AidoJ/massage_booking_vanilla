@@ -168,7 +168,7 @@ exports.handler = async (event, context) => {
   }
 };
 
-// Handle booking acceptance - FIXED DATABASE UPDATE
+// Handle booking acceptance
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log(`✅ Processing booking acceptance: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
@@ -176,18 +176,18 @@ async function handleBookingAccept(booking, therapist, headers) {
 
     // Update booking status with full tracking
     // Note: therapist_id = originally assigned, responding_therapist_id = who actually responded
-    const updateData = {
+    const acceptUpdateData = {
       status: 'confirmed',
       therapist_response_time: new Date().toISOString(),
       responding_therapist_id: therapist.id,
       updated_at: new Date().toISOString()
     };
 
-    console.log('📝 Updating booking with data:', JSON.stringify(updateData, null, 2));
+    console.log('📝 Updating booking with data:', JSON.stringify(acceptUpdateData, null, 2));
 
     const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData)
+      .update(acceptUpdateData)
       .eq('booking_id', booking.booking_id);
 
     if (updateError) {
@@ -276,6 +276,7 @@ async function handleBookingAccept(booking, therapist, headers) {
 async function handleBookingDecline(booking, therapist, headers) {
   try {
     console.log(`❌ Processing booking decline: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
+    console.log(`📊 Original therapist: ${booking.therapist_id}, Responding therapist: ${therapist.id}`);
 
     // Check customer's fallback preference
     if (booking.fallback_option === 'yes') {
@@ -304,18 +305,7 @@ async function handleBookingDecline(booking, therapist, headers) {
 
     // No alternative found or customer didn't want fallback
     // Update booking status with full tracking  
-    const updateData = {
-      status: 'declined',
-      therapist_response_time: new Date().toISOString(),
-      responding_therapist_id: therapist.id,
-      updated_at: new Date().toISOString()
-    };
-
-    console.log(`❌ Processing booking decline: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
-    console.log(`📊 Original therapist: ${booking.therapist_id}, Responding therapist: ${therapist.id}`);
-
-    // Update booking status with full tracking  
-    const updateData = {
+    const declineUpdateData = {
       status: 'declined',
       therapist_response_time: new Date().toISOString(),
       responding_therapist_id: therapist.id,
@@ -324,7 +314,7 @@ async function handleBookingDecline(booking, therapist, headers) {
 
     const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData)
+      .update(declineUpdateData)
       .eq('booking_id', booking.booking_id);
 
     if (updateError) {
@@ -410,12 +400,14 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
     console.log(`✅ Found alternative: ${alternativeTherapist.first_name} ${alternativeTherapist.last_name}`);
 
     // Update booking with new therapist
+    const alternativeUpdateData = {
+      therapist_id: alternativeTherapist.id,
+      updated_at: new Date().toISOString()
+    };
+
     const { error: updateError } = await supabase
       .from('bookings')
-      .update({ 
-        therapist_id: alternativeTherapist.id,
-        updated_at: new Date().toISOString()
-      })
+      .update(alternativeUpdateData)
       .eq('booking_id', booking.booking_id);
 
     if (updateError) {
