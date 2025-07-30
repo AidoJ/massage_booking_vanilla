@@ -108,8 +108,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if booking is still pending
-    if (booking.status !== 'requested') {
+    // Check if booking is still pending or reassigned due to timeout
+    if (booking.status !== 'requested' && booking.status !== 'timeout_reassigned') {
       return {
         statusCode: 409,
         headers,
