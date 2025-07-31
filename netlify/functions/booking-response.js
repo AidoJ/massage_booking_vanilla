@@ -1,11 +1,12 @@
-// PART 1: Fixed booking-response.js (handles alternate therapists)
+// COMPLETE UPDATED booking-response.js file
+// Replace your entire netlify/functions/booking-response.js with this code
 
 const { createClient } = require('@supabase/supabase-js');
 
 /*
  * FIXED Booking Response Handler 
- * - Allows alternate therapists to respond after timeout
- * - Prevents infinite timeout loops
+ * - Handles alternate therapists properly with multiple therapist approach
+ * - Prevents customer from getting premature decline emails
  */
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://dcukfurezlkagvvwgsgr.supabase.co';
@@ -86,7 +87,7 @@ exports.handler = async (event, context) => {
 
     console.log(`📋 Booking status: ${booking.status}, Original therapist: ${booking.therapist_id}, Responding therapist: ${therapistId}`);
 
-    // FIXED: Verify therapist access based on booking status
+    // Verify therapist access based on booking status
     const canRespond = await verifyTherapistCanRespond(booking, therapistId);
     if (!canRespond.allowed) {
       return {
@@ -113,7 +114,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    if (booking.status !== 'requested' && booking.status !== 'timeout_reassigned') {
+    // UPDATED: Allow responses for seeking_alternate status
+    if (booking.status !== 'requested' && booking.status !== 'timeout_reassigned' && booking.status !== 'seeking_alternate') {
       return {
         statusCode: 409,
         headers,
@@ -154,7 +156,7 @@ exports.handler = async (event, context) => {
   }
 };
 
-// FIXED: Verify if therapist can respond to booking
+// UPDATED: Verify if therapist can respond to booking
 async function verifyTherapistCanRespond(booking, therapistId) {
   try {
     // For regular bookings - only original therapist can respond
@@ -169,9 +171,9 @@ async function verifyTherapistCanRespond(booking, therapistId) {
       }
     }
 
-    // For timeout reassigned bookings - check if therapist provides the service and is in area
-    if (booking.status === 'timeout_reassigned') {
-      console.log('🔍 Checking if therapist can respond to reassigned booking...');
+    // UPDATED: For seeking_alternate, timeout_reassigned status - check if therapist provides service and is in area
+    if (booking.status === 'seeking_alternate' || booking.status === 'timeout_reassigned') {
+      console.log('🔍 Checking if therapist can respond to alternate booking...');
       
       // Check if therapist provides this service
       const { data: serviceLink } = await supabase
@@ -211,7 +213,7 @@ async function verifyTherapistCanRespond(booking, therapistId) {
         }
       }
 
-      console.log('✅ Therapist authorized for reassigned booking');
+      console.log('✅ Therapist authorized for alternate booking');
       return { allowed: true };
     }
 
@@ -234,7 +236,7 @@ async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log(`✅ Processing booking acceptance: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
 
-    // FIXED: Update both therapist_id and responding_therapist_id
+    // Update both therapist_id and responding_therapist_id
     const acceptUpdateData = {
       status: 'confirmed',
       therapist_id: therapist.id,        // Update to accepting therapist
@@ -259,8 +261,8 @@ async function handleBookingAccept(booking, therapist, headers) {
 
     // Add status history
     try {
-      const historyNote = booking.status === 'timeout_reassigned' ? 
-        'Accepted by alternate therapist after timeout' : 
+      const historyNote = (booking.status === 'timeout_reassigned' || booking.status === 'seeking_alternate') ? 
+        'Accepted by alternate therapist' : 
         'Accepted by original therapist';
       await addStatusHistory(booking.id, 'confirmed', therapist.id, historyNote);
       console.log('✅ Status history added');
@@ -291,9 +293,9 @@ async function handleBookingAccept(booking, therapist, headers) {
       serviceName = booking.services.name;
     }
 
-    const wasReassigned = booking.status === 'timeout_reassigned';
-    const successMessage = wasReassigned ?
-      `Thank you ${therapist.first_name}! You have successfully accepted this reassigned booking ${booking.booking_id}.` :
+    const wasAlternate = (booking.status === 'timeout_reassigned' || booking.status === 'seeking_alternate');
+    const successMessage = wasAlternate ?
+      `Thank you ${therapist.first_name}! You have successfully accepted this alternate booking ${booking.booking_id}.` :
       `Thank you ${therapist.first_name}! You have successfully accepted booking ${booking.booking_id}.`;
 
     return {
@@ -323,18 +325,18 @@ async function handleBookingAccept(booking, therapist, headers) {
   }
 }
 
-// Handle booking decline - UPDATED for alternate therapists
+// COMPLETELY UPDATED: Handle booking decline with multiple therapist approach
 async function handleBookingDecline(booking, therapist, headers) {
   try {
     console.log(`❌ Processing booking decline: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
 
-    // If this is a timeout_reassigned booking, just record the decline but don't change booking status
+    // If this is a timeout_reassigned or seeking_alternate booking, just record the decline
     // (other therapists might still accept)
-    if (booking.status === 'timeout_reassigned') {
-      console.log('📝 Recording decline for reassigned booking - other therapists can still respond');
+    if (booking.status === 'timeout_reassigned' || booking.status === 'seeking_alternate') {
+      console.log('📝 Recording decline for alternate booking - other therapists can still respond');
       
       await addStatusHistory(booking.id, 'therapist_declined', therapist.id, 
-        `${therapist.first_name} ${therapist.last_name} declined reassigned booking`);
+        `${therapist.first_name} ${therapist.last_name} declined alternate booking`);
 
       return {
         statusCode: 200,
@@ -350,30 +352,57 @@ async function handleBookingDecline(booking, therapist, headers) {
       };
     }
 
-    // Original booking decline logic (for non-reassigned bookings)
+    // FIXED: Original booking decline logic - use multiple therapist approach
     if (booking.fallback_option === 'yes') {
-      const alternativeFound = await findAndAssignAlternativeTherapist(booking, therapist.id);
+      console.log(`🔍 Customer wants alternatives - finding ALL available therapists for ${booking.booking_id}`);
       
-      if (alternativeFound) {
+      // Find ALL available alternative therapists (not just one)
+      const availableTherapists = await findAllAvailableTherapists(booking, therapist.id);
+      
+      if (availableTherapists.length > 0) {
+        console.log(`✅ Found ${availableTherapists.length} alternative therapists`);
+        
+        // 1. FIRST: Send "Looking for Alternate" email to customer
         await sendClientLookingForAlternateEmail(booking);
+        
+        // 2. Update booking status to prevent reprocessing
+        await updateBookingStatus(booking.booking_id, 'seeking_alternate');
+        await addStatusHistory(booking.id, 'seeking_alternate', therapist.id, 
+          `${therapist.first_name} ${therapist.last_name} declined - searching ${availableTherapists.length} alternatives`);
+        
+        // 3. Send booking requests to ALL available therapists
+        const { data: timeoutSetting } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'therapist_response_timeout_minutes')
+          .single();
+        const timeoutMinutes = timeoutSetting?.value ? parseInt(timeoutSetting.value) : 60;
+        
+        const emailResults = await sendBookingRequestsToMultipleTherapists(booking, availableTherapists, timeoutMinutes);
+        console.log(`📧 Sent requests to ${availableTherapists.length} therapists`);
         
         return {
           statusCode: 200,
           headers,
           body: generateSuccessPage(
-            'Booking Declined - Alternative Found',
-            `Thank you for your response, ${therapist.first_name}. We're contacting an alternative therapist for this booking.`,
+            'Booking Declined - Alternatives Found',
+            `Thank you for your response, ${therapist.first_name}. We found ${availableTherapists.length} alternative therapists and are contacting them now.`,
             [
               `Booking: ${booking.booking_id}`,
               `Client: ${booking.first_name} ${booking.last_name}`,
-              `An alternative therapist will be contacted shortly.`
+              `${availableTherapists.length} alternative therapists contacted`,
+              `Customer has been notified we're looking for alternatives`
             ]
           )
-        };
+        );
+      } else {
+        console.log(`❌ No alternative therapists found for ${booking.booking_id}`);
       }
     }
 
-    // No alternative found or customer didn't want fallback
+    // No alternative found or customer didn't want fallback - send decline
+    console.log(`📧 Sending final decline email to customer for ${booking.booking_id}`);
+    
     const declineUpdateData = {
       status: 'declined',
       therapist_response_time: new Date().toISOString(),
@@ -391,7 +420,7 @@ async function handleBookingDecline(booking, therapist, headers) {
       throw new Error('Failed to decline booking');
     }
 
-    await addStatusHistory(booking.id, 'declined', therapist.id);
+    await addStatusHistory(booking.id, 'declined', therapist.id, 'No alternatives available or customer declined fallback');
     await sendClientDeclineEmail(booking);
 
     return {
@@ -418,13 +447,12 @@ async function handleBookingDecline(booking, therapist, headers) {
   }
 }
 
-// Rest of the functions remain the same as before...
-// (Including email functions, helper functions, etc.)
-
-async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
+// NEW: Find all available therapists for a booking (replaces findAndAssignAlternativeTherapist)
+async function findAllAvailableTherapists(booking, excludeTherapistId) {
   try {
-    console.log(`🔍 Looking for alternative therapist for booking ${booking.booking_id}`);
+    console.log(`🔍 Finding ALL available therapists for ${booking.booking_id}, excluding ${excludeTherapistId}`);
 
+    // Get therapists who provide this service
     const { data: therapistLinks } = await supabase
       .from('therapist_services')
       .select(`
@@ -440,10 +468,15 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
       .map(row => row.therapist_profiles)
       .filter(t => t && t.is_active && t.id !== excludeTherapistId);
 
+    console.log(`📊 Found ${availableTherapists.length} therapists who provide this service (excluding original)`);
+
+    // Filter by gender preference
     if (booking.gender_preference && booking.gender_preference !== 'any') {
       availableTherapists = availableTherapists.filter(t => t.gender === booking.gender_preference);
+      console.log(`📊 After gender filter (${booking.gender_preference}): ${availableTherapists.length} therapists`);
     }
 
+    // Filter by location (if available)
     if (booking.latitude && booking.longitude) {
       availableTherapists = availableTherapists.filter(t => {
         if (!t.latitude || !t.longitude || !t.service_radius_km) return false;
@@ -453,46 +486,81 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
         );
         return distance <= t.service_radius_km;
       });
+      console.log(`📊 After location filter: ${availableTherapists.length} therapists`);
     }
 
-    if (availableTherapists.length === 0) {
-      console.log(`❌ No alternative therapists found for booking ${booking.booking_id}`);
-      return false;
-    }
+    // Remove duplicates by ID (just in case)
+    const uniqueTherapists = Array.from(
+      new Map(availableTherapists.map(t => [t.id, t])).values()
+    );
 
-    const alternativeTherapist = availableTherapists[0];
-    console.log(`✅ Found alternative: ${alternativeTherapist.first_name} ${alternativeTherapist.last_name}`);
-
-    const alternativeUpdateData = {
-      therapist_id: alternativeTherapist.id,
-      updated_at: new Date().toISOString()
-    };
-
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update(alternativeUpdateData)
-      .eq('booking_id', booking.booking_id);
-
-    if (updateError) {
-      console.error('❌ Error updating booking with alternative therapist:', updateError);
-      return false;
-    }
-
-    const { data: timeoutSetting } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'therapist_response_timeout_minutes')
-      .single();
-
-    const timeoutMinutes = timeoutSetting?.value ? parseInt(timeoutSetting.value) : 60;
-
-    await sendTherapistBookingRequest(booking, alternativeTherapist, timeoutMinutes);
-
-    return true;
+    console.log(`📊 Final available therapists: ${uniqueTherapists.length}`);
+    return uniqueTherapists;
 
   } catch (error) {
-    console.error('❌ Error finding alternative therapist:', error);
-    return false;
+    console.error('❌ Error finding available therapists:', error);
+    return [];
+  }
+}
+
+// NEW: Send booking requests to multiple therapists
+async function sendBookingRequestsToMultipleTherapists(booking, therapists, timeoutMinutes) {
+  const results = [];
+  
+  console.log(`📧 Sending booking requests to ${therapists.length} therapists...`);
+  
+  for (const therapist of therapists) {
+    try {
+      console.log(`📧 Sending to ${therapist.first_name} ${therapist.last_name} (${therapist.email})`);
+      
+      const result = await sendTherapistBookingRequest(booking, therapist, timeoutMinutes);
+      results.push({
+        therapist_id: therapist.id,
+        therapist_name: `${therapist.first_name} ${therapist.last_name}`,
+        success: result.success,
+        error: result.error
+      });
+      
+      // Small delay between emails to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      console.error(`❌ Error sending to ${therapist.first_name} ${therapist.last_name}:`, error);
+      results.push({
+        therapist_id: therapist.id,
+        therapist_name: `${therapist.first_name} ${therapist.last_name}`,
+        success: false,
+        error: error.message
+      });
+    }
+  }
+  
+  const successCount = results.filter(r => r.success).length;
+  console.log(`📧 Successfully sent ${successCount}/${results.length} therapist emails`);
+  
+  return results;
+}
+
+// NEW: Helper function to update booking status
+async function updateBookingStatus(bookingId, status) {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ 
+        status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('booking_id', bookingId);
+
+    if (error) {
+      console.error(`❌ Error updating booking ${bookingId} status:`, error);
+      throw error;
+    } else {
+      console.log(`✅ Updated booking ${bookingId} status to: ${status}`);
+    }
+  } catch (error) {
+    console.error(`❌ Error updating booking status:`, error);
+    throw error;
   }
 }
 
@@ -646,11 +714,13 @@ async function sendTherapistBookingRequest(booking, therapist, timeoutMinutes) {
       decline_url: declineUrl
     };
 
-    await sendEmail(EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID, templateParams);
+    const result = await sendEmail(EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID, templateParams);
     console.log(`📧 Booking request sent to therapist: ${therapist.email}`);
+    return result;
 
   } catch (error) {
     console.error('❌ Error sending therapist booking request:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -718,7 +788,7 @@ async function sendEmail(templateId, templateParams) {
   }
 }
 
-// HTML page generators (same as before)
+// HTML page generators
 function generateSuccessPage(title, message, details = []) {
   return `
 <!DOCTYPE html>
