@@ -1,10 +1,13 @@
+// PART 1: Fixed booking-response.js (handles alternate therapists)
+
 const { createClient } = require('@supabase/supabase-js');
 
 /*
- * Booking Response Handler - Accept/Decline Therapist Responses
+ * FIXED Booking Response Handler 
+ * - Allows alternate therapists to respond after timeout
+ * - Prevents infinite timeout loops
  */
 
-// Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || 'https://dcukfurezlkagvvwgsgr.supabase.co';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjdWtmdXJlemxrYWd2dndnc2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MjM0NjQsImV4cCI6MjA2NzQ5OTQ2NH0.ThXQKNHj0XpSkPa--ghmuRXFJ7nfcf0YVlH0liHofFw';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -20,13 +23,10 @@ const EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = process.env.EMAILJS_LOOKING_ALTERN
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
 const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
 
-// Debug logging
 console.log('🔧 EmailJS Configuration:');
 console.log('Service ID:', EMAILJS_SERVICE_ID);
 console.log('Public Key:', EMAILJS_PUBLIC_KEY);
 console.log('Private Key:', EMAILJS_PRIVATE_KEY ? '✅ Configured' : '❌ Missing');
-console.log('Booking Confirmed Template:', EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID);
-console.log('Therapist Confirmed Template:', EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID);
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -37,11 +37,7 @@ exports.handler = async (event, context) => {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: ''
-    };
+    return { statusCode: 200, headers, body: '' };
   }
 
   try {
@@ -88,41 +84,40 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Verify therapist ID matches
-    if (booking.therapist_id !== therapistId) {
+    console.log(`📋 Booking status: ${booking.status}, Original therapist: ${booking.therapist_id}, Responding therapist: ${therapistId}`);
+
+    // FIXED: Verify therapist access based on booking status
+    const canRespond = await verifyTherapistCanRespond(booking, therapistId);
+    if (!canRespond.allowed) {
       return {
         statusCode: 403,
         headers,
-        body: generateErrorPage('This booking request was not assigned to you.')
+        body: generateErrorPage(canRespond.reason)
       };
     }
 
     // Check if booking is available for response
+    if (booking.status === 'confirmed') {
+      return {
+        statusCode: 409,
+        headers,
+        body: generateErrorPage('This booking has already been accepted by another therapist. Thank you for your interest.')
+      };
+    }
+
+    if (booking.status === 'declined') {
+      return {
+        statusCode: 409,
+        headers,
+        body: generateErrorPage('This booking has already been declined. Thank you for your response.')
+      };
+    }
+
     if (booking.status !== 'requested' && booking.status !== 'timeout_reassigned') {
       return {
         statusCode: 409,
         headers,
-        body: generateErrorPage(`This booking has already been ${booking.status}. Thank you for your response.`)
-      };
-    }
-
-    // Check timeout
-    const { data: timeoutSetting } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'therapist_response_timeout_minutes')
-      .single();
-
-    const timeoutMinutes = timeoutSetting?.value ? parseInt(timeoutSetting.value) : 60;
-    const bookingTime = new Date(booking.created_at);
-    const now = new Date();
-    const timeDiff = (now - bookingTime) / (1000 * 60);
-
-    if (timeDiff > timeoutMinutes * 2) { // Allow double timeout for reassigned bookings
-      return {
-        statusCode: 408,
-        headers,
-        body: generateErrorPage(`Response time expired. You had ${timeoutMinutes} minutes to respond.`)
+        body: generateErrorPage(`This booking has status: ${booking.status}. Cannot process response.`)
       };
     }
 
@@ -159,13 +154,90 @@ exports.handler = async (event, context) => {
   }
 };
 
-// Handle booking acceptance
+// FIXED: Verify if therapist can respond to booking
+async function verifyTherapistCanRespond(booking, therapistId) {
+  try {
+    // For regular bookings - only original therapist can respond
+    if (booking.status === 'requested') {
+      if (booking.therapist_id === therapistId) {
+        return { allowed: true };
+      } else {
+        return { 
+          allowed: false, 
+          reason: 'This booking request was not assigned to you.' 
+        };
+      }
+    }
+
+    // For timeout reassigned bookings - check if therapist provides the service and is in area
+    if (booking.status === 'timeout_reassigned') {
+      console.log('🔍 Checking if therapist can respond to reassigned booking...');
+      
+      // Check if therapist provides this service
+      const { data: serviceLink } = await supabase
+        .from('therapist_services')
+        .select('therapist_id')
+        .eq('therapist_id', therapistId)
+        .eq('service_id', booking.service_id)
+        .single();
+
+      if (!serviceLink) {
+        return { 
+          allowed: false, 
+          reason: 'You do not provide this service.' 
+        };
+      }
+
+      // Check if therapist is in the service area (if location data available)
+      if (booking.latitude && booking.longitude) {
+        const { data: therapistData } = await supabase
+          .from('therapist_profiles')
+          .select('latitude, longitude, service_radius_km')
+          .eq('id', therapistId)
+          .single();
+
+        if (therapistData && therapistData.latitude && therapistData.longitude && therapistData.service_radius_km) {
+          const distance = calculateDistance(
+            booking.latitude, booking.longitude,
+            therapistData.latitude, therapistData.longitude
+          );
+          
+          if (distance > therapistData.service_radius_km) {
+            return { 
+              allowed: false, 
+              reason: 'This booking is outside your service area.' 
+            };
+          }
+        }
+      }
+
+      console.log('✅ Therapist authorized for reassigned booking');
+      return { allowed: true };
+    }
+
+    return { 
+      allowed: false, 
+      reason: 'Booking status does not allow responses.' 
+    };
+
+  } catch (error) {
+    console.error('❌ Error verifying therapist access:', error);
+    return { 
+      allowed: false, 
+      reason: 'Error verifying access. Please contact support.' 
+    };
+  }
+}
+
+// Handle booking acceptance - UPDATED for alternate therapists
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log(`✅ Processing booking acceptance: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
 
+    // FIXED: Update both therapist_id and responding_therapist_id
     const acceptUpdateData = {
       status: 'confirmed',
+      therapist_id: therapist.id,        // Update to accepting therapist
       therapist_response_time: new Date().toISOString(),
       responding_therapist_id: therapist.id,
       updated_at: new Date().toISOString()
@@ -187,7 +259,10 @@ async function handleBookingAccept(booking, therapist, headers) {
 
     // Add status history
     try {
-      await addStatusHistory(booking.id, 'confirmed', therapist.id);
+      const historyNote = booking.status === 'timeout_reassigned' ? 
+        'Accepted by alternate therapist after timeout' : 
+        'Accepted by original therapist';
+      await addStatusHistory(booking.id, 'confirmed', therapist.id, historyNote);
       console.log('✅ Status history added');
     } catch (historyError) {
       console.error('❌ Error adding status history:', historyError);
@@ -216,12 +291,17 @@ async function handleBookingAccept(booking, therapist, headers) {
       serviceName = booking.services.name;
     }
 
+    const wasReassigned = booking.status === 'timeout_reassigned';
+    const successMessage = wasReassigned ?
+      `Thank you ${therapist.first_name}! You have successfully accepted this reassigned booking ${booking.booking_id}.` :
+      `Thank you ${therapist.first_name}! You have successfully accepted booking ${booking.booking_id}.`;
+
     return {
       statusCode: 200,
       headers,
       body: generateSuccessPage(
         'Booking Accepted Successfully!',
-        `Thank you ${therapist.first_name}! You have successfully accepted booking ${booking.booking_id}.`,
+        successMessage,
         [
           `Client: ${booking.first_name} ${booking.last_name}`,
           `Service: ${serviceName}`,
@@ -243,12 +323,34 @@ async function handleBookingAccept(booking, therapist, headers) {
   }
 }
 
-// Handle booking decline
+// Handle booking decline - UPDATED for alternate therapists
 async function handleBookingDecline(booking, therapist, headers) {
   try {
     console.log(`❌ Processing booking decline: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
 
-    // Check customer's fallback preference
+    // If this is a timeout_reassigned booking, just record the decline but don't change booking status
+    // (other therapists might still accept)
+    if (booking.status === 'timeout_reassigned') {
+      console.log('📝 Recording decline for reassigned booking - other therapists can still respond');
+      
+      await addStatusHistory(booking.id, 'therapist_declined', therapist.id, 
+        `${therapist.first_name} ${therapist.last_name} declined reassigned booking`);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: generateSuccessPage(
+          'Response Recorded',
+          `Thank you for your response, ${therapist.first_name}. Your decline has been recorded. Other therapists may still accept this booking.`,
+          [
+            `Booking: ${booking.booking_id}`,
+            `Client: ${booking.first_name} ${booking.last_name}`
+          ]
+        )
+      };
+    }
+
+    // Original booking decline logic (for non-reassigned bookings)
     if (booking.fallback_option === 'yes') {
       const alternativeFound = await findAndAssignAlternativeTherapist(booking, therapist.id);
       
@@ -316,7 +418,9 @@ async function handleBookingDecline(booking, therapist, headers) {
   }
 }
 
-// Find and assign alternative therapist
+// Rest of the functions remain the same as before...
+// (Including email functions, helper functions, etc.)
+
 async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
   try {
     console.log(`🔍 Looking for alternative therapist for booking ${booking.booking_id}`);
@@ -392,7 +496,7 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
   }
 }
 
-// Email functions
+// Email functions (same as before)
 async function sendClientConfirmationEmail(booking, therapist) {
   try {
     console.log('📧 Preparing client confirmation email...');
@@ -416,11 +520,7 @@ async function sendClientConfirmationEmail(booking, therapist) {
       estimated_price: booking.price ? `$${booking.price.toFixed(2)}` : 'N/A'
     };
 
-    console.log('📧 Client confirmation template params:', templateParams);
-
     const result = await sendEmail(EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID, templateParams);
-    console.log('📧 Client confirmation email result:', result);
-
     return result;
 
   } catch (error) {
@@ -455,11 +555,7 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
       therapist_fee: booking.therapist_fee ? `$${booking.therapist_fee.toFixed(2)}` : 'TBD'
     };
 
-    console.log('📧 Therapist confirmation template params:', templateParams);
-
     const result = await sendEmail(EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID, templateParams);
-    console.log('📧 Therapist confirmation email result:', result);
-
     return result;
 
   } catch (error) {
@@ -570,7 +666,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-async function addStatusHistory(bookingId, status, userId) {
+async function addStatusHistory(bookingId, status, userId, notes = null) {
   try {
     await supabase
       .from('booking_status_history')
@@ -578,7 +674,8 @@ async function addStatusHistory(bookingId, status, userId) {
         booking_id: bookingId,
         status: status,
         changed_by: userId,
-        changed_at: new Date().toISOString()
+        changed_at: new Date().toISOString(),
+        notes: notes
       });
   } catch (error) {
     console.error('❌ Error adding status history:', error);
@@ -587,15 +684,10 @@ async function addStatusHistory(bookingId, status, userId) {
 
 async function sendEmail(templateId, templateParams) {
   try {
-    console.log(`📧 Sending email with template: ${templateId}`);
-    
     if (!EMAILJS_PRIVATE_KEY) {
       console.warn('⚠️ No private key found for EmailJS');
       return { success: false, error: 'Private key required' };
     }
-    
-    console.log('🔑 Using Public Key:', EMAILJS_PUBLIC_KEY?.substring(0, 10) + '...');
-    console.log('🔑 Using Private Key:', EMAILJS_PRIVATE_KEY?.substring(0, 10) + '...');
     
     const emailData = {
       service_id: EMAILJS_SERVICE_ID,
@@ -605,26 +697,19 @@ async function sendEmail(templateId, templateParams) {
       template_params: templateParams
     };
 
-    console.log('📧 Using server-side authentication: Public Key + Private Access Token');
-
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emailData)
     });
 
     const responseText = await response.text();
-    console.log('📧 EmailJS response status:', response.status);
-    console.log('📧 EmailJS response:', responseText);
-
+    
     if (!response.ok) {
       console.error('❌ EmailJS API error:', response.status, responseText);
-      return { success: false, error: `EmailJS error: ${response.status} - ${responseText}` };
+      return { success: false, error: `EmailJS error: ${response.status}` };
     }
 
-    console.log('✅ Email sent successfully');
     return { success: true, response: responseText };
 
   } catch (error) {
@@ -633,7 +718,7 @@ async function sendEmail(templateId, templateParams) {
   }
 }
 
-// HTML page generators
+// HTML page generators (same as before)
 function generateSuccessPage(title, message, details = []) {
   return `
 <!DOCTYPE html>
