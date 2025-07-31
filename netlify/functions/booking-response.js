@@ -436,10 +436,14 @@ async function handleBookingDecline(booking, therapist, headers) {
   }
 }
 
-// Find all available therapists for a booking
+// UPDATED: booking-response.js - Fixed to check actual time slot availability
+// Replace the findAllAvailableTherapists function in your booking-response.js with this version:
+
+// FIXED: Find all available therapists for a booking (checks actual time slot availability)
 async function findAllAvailableTherapists(booking, excludeTherapistId) {
   try {
     console.log('🔍 Finding ALL available therapists for', booking.booking_id, ', excluding', excludeTherapistId);
+    console.log('📅 Booking time:', booking.booking_time);
 
     // Get therapists who provide this service
     const { data: therapistLinks } = await supabase
@@ -447,21 +451,21 @@ async function findAllAvailableTherapists(booking, excludeTherapistId) {
       .select('therapist_id, therapist_profiles!therapist_id (id, first_name, last_name, email, gender, is_active, latitude, longitude, service_radius_km)')
       .eq('service_id', booking.service_id);
 
-    let availableTherapists = (therapistLinks || [])
+    let candidateTherapists = (therapistLinks || [])
       .map(row => row.therapist_profiles)
       .filter(t => t && t.is_active && t.id !== excludeTherapistId);
 
-    console.log('📊 Found', availableTherapists.length, 'therapists who provide this service (excluding original)');
+    console.log('📊 Found', candidateTherapists.length, 'therapists who provide this service (excluding original)');
 
     // Filter by gender preference
     if (booking.gender_preference && booking.gender_preference !== 'any') {
-      availableTherapists = availableTherapists.filter(t => t.gender === booking.gender_preference);
-      console.log('📊 After gender filter (' + booking.gender_preference + '):', availableTherapists.length, 'therapists');
+      candidateTherapists = candidateTherapists.filter(t => t.gender === booking.gender_preference);
+      console.log('📊 After gender filter (' + booking.gender_preference + '):', candidateTherapists.length, 'therapists');
     }
 
     // Filter by location (if available)
     if (booking.latitude && booking.longitude) {
-      availableTherapists = availableTherapists.filter(t => {
+      candidateTherapists = candidateTherapists.filter(t => {
         if (!t.latitude || !t.longitude || !t.service_radius_km) return false;
         const distance = calculateDistance(
           booking.latitude, booking.longitude,
@@ -469,15 +473,90 @@ async function findAllAvailableTherapists(booking, excludeTherapistId) {
         );
         return distance <= t.service_radius_km;
       });
-      console.log('📊 After location filter:', availableTherapists.length, 'therapists');
+      console.log('📊 After location filter:', candidateTherapists.length, 'therapists');
     }
 
-    // Remove duplicates by ID
+    // NEW: Filter by actual time slot availability
+    const availableTherapists = [];
+    const bookingDate = new Date(booking.booking_time);
+    const dayOfWeek = bookingDate.getDay(); // 0=Sunday, 6=Saturday
+    const bookingTimeOnly = bookingDate.toTimeString().slice(0, 5); // HH:MM format
+    const bookingDateOnly = bookingDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    console.log('🕐 Checking availability for:', bookingDateOnly, 'at', bookingTimeOnly, '(day', dayOfWeek + ')');
+
+    for (const therapist of candidateTherapists) {
+      try {
+        // Check if therapist works on this day of week
+        const { data: availability } = await supabase
+          .from('therapist_availability')
+          .select('start_time, end_time')
+          .eq('therapist_id', therapist.id)
+          .eq('day_of_week', dayOfWeek);
+
+        if (!availability || availability.length === 0) {
+          console.log('❌', therapist.first_name, therapist.last_name, 'does not work on day', dayOfWeek);
+          continue;
+        }
+
+        const { start_time, end_time } = availability[0];
+        
+        // Check if booking time is within working hours
+        if (bookingTimeOnly < start_time || bookingTimeOnly >= end_time) {
+          console.log('❌', therapist.first_name, therapist.last_name, 'not available at', bookingTimeOnly, '(works', start_time, '-', end_time + ')');
+          continue;
+        }
+
+        // Check for existing bookings at this time
+        const { data: existingBookings } = await supabase
+          .from('bookings')
+          .select('booking_time, duration_minutes, status')
+          .eq('therapist_id', therapist.id)
+          .gte('booking_time', bookingDateOnly + 'T00:00:00')
+          .lt('booking_time', bookingDateOnly + 'T23:59:59')
+          .in('status', ['requested', 'confirmed', 'timeout_reassigned', 'seeking_alternate']);
+
+        // Check for time conflicts
+        let hasConflict = false;
+        const bookingStart = new Date(booking.booking_time);
+        const bookingEnd = new Date(bookingStart.getTime() + (booking.duration_minutes * 60000));
+
+        for (const existingBooking of existingBookings || []) {
+          const existingStart = new Date(existingBooking.booking_time);
+          const existingEnd = new Date(existingStart.getTime() + (existingBooking.duration_minutes * 60000));
+          
+          // Check for overlap (with 15-minute buffer)
+          const bufferMs = 15 * 60000; // 15 minutes in milliseconds
+          const existingStartWithBuffer = new Date(existingStart.getTime() - bufferMs);
+          const existingEndWithBuffer = new Date(existingEnd.getTime() + bufferMs);
+          
+          if (bookingStart < existingEndWithBuffer && bookingEnd > existingStartWithBuffer) {
+            console.log('❌', therapist.first_name, therapist.last_name, 'has conflict with existing booking at', existingBooking.booking_time);
+            hasConflict = true;
+            break;
+          }
+        }
+
+        if (!hasConflict) {
+          console.log('✅', therapist.first_name, therapist.last_name, 'is available for', bookingDateOnly, 'at', bookingTimeOnly);
+          availableTherapists.push(therapist);
+        }
+
+      } catch (error) {
+        console.error('❌ Error checking availability for', therapist.first_name, therapist.last_name + ':', error);
+        // Skip this therapist if there's an error checking availability
+        continue;
+      }
+    }
+
+    // Remove duplicates by ID (just in case)
     const uniqueTherapists = Array.from(
       new Map(availableTherapists.map(t => [t.id, t])).values()
     );
 
-    console.log('📊 Final available therapists:', uniqueTherapists.length);
+    console.log('📊 Final available therapists (after time slot check):', uniqueTherapists.length);
+    uniqueTherapists.forEach(t => console.log('  ✅', t.first_name, t.last_name));
+    
     return uniqueTherapists;
 
   } catch (error) {
