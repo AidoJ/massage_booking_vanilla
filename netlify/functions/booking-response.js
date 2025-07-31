@@ -1,14 +1,7 @@
-nconst { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase-js');
 
 /*
  * Booking Response Handler - Accept/Decline Therapist Responses
- * 
- * Database Columns Used:
- * - therapist_id: Originally assigned therapist
- * - responding_therapist_id: Therapist who actually responded (may differ if alternative assigned)
- * - therapist_response_time: When the response was received
- * - status: 'requested' -> 'confirmed' or 'declined'
- * - updated_at: Auto-updated by database trigger
  */
 
 // Initialize Supabase client
@@ -16,7 +9,7 @@ const supabaseUrl = process.env.SUPABASE_URL || 'https://dcukfurezlkagvvwgsgr.su
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjdWtmdXJlemxrYWd2dndnc2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MjM0NjQsImV4cCI6MjA2NzQ5OTQ2NH0.ThXQKNHj0XpSkPa--ghmuRXFJ7nfcf0YVlH0liHofFw';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// EmailJS configuration - MATCHING your actual template IDs
+// EmailJS configuration
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || 'service_puww2kb';
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || 'template_ai9rrg6';
 const EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID || 'template_51wt6of';
@@ -25,18 +18,17 @@ const EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_CO
 const EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_DECLINED_TEMPLATE_ID || 'template_declined';
 const EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID = process.env.EMAILJS_LOOKING_ALTERNATE_TEMPLATE_ID || 'template_alternate';
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
-const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY; // Required for server-side calls
+const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
 
-// Debug logging for template IDs
+// Debug logging
 console.log('🔧 EmailJS Configuration:');
 console.log('Service ID:', EMAILJS_SERVICE_ID);
 console.log('Public Key:', EMAILJS_PUBLIC_KEY);
-console.log('Private Key:', EMAILJS_PRIVATE_KEY ? '✅ Configured' : '❌ Missing (required for server-side calls)');
+console.log('Private Key:', EMAILJS_PRIVATE_KEY ? '✅ Configured' : '❌ Missing');
 console.log('Booking Confirmed Template:', EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID);
 console.log('Therapist Confirmed Template:', EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID);
 
 exports.handler = async (event, context) => {
-  // Enable CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -44,7 +36,6 @@ exports.handler = async (event, context) => {
     'Content-Type': 'text/html; charset=utf-8'
   };
 
-  // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -54,15 +45,13 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Parse query parameters
     const params = new URLSearchParams(event.rawQuery || '');
-    const action = params.get('action'); // 'accept' or 'decline'
-    const bookingId = params.get('booking'); // booking_id string like 'RMM202501-0001'
-    const therapistId = params.get('therapist'); // therapist UUID
+    const action = params.get('action');
+    const bookingId = params.get('booking');
+    const therapistId = params.get('therapist');
 
     console.log('📞 Booking response received:', { action, bookingId, therapistId });
 
-    // Validate required parameters
     if (!action || !bookingId || !therapistId) {
       return {
         statusCode: 400,
@@ -95,7 +84,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 404,
         headers,
-        body: generateErrorPage('Booking not found. It may have already been processed.')
+        body: generateErrorPage('Booking not found.')
       };
     }
 
@@ -108,7 +97,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if booking is still pending or reassigned due to timeout
+    // Check if booking is available for response
     if (booking.status !== 'requested' && booking.status !== 'timeout_reassigned') {
       return {
         statusCode: 409,
@@ -117,7 +106,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if response is within timeout window
+    // Check timeout
     const { data: timeoutSetting } = await supabase
       .from('system_settings')
       .select('value')
@@ -127,9 +116,9 @@ exports.handler = async (event, context) => {
     const timeoutMinutes = timeoutSetting?.value ? parseInt(timeoutSetting.value) : 60;
     const bookingTime = new Date(booking.created_at);
     const now = new Date();
-    const timeDiff = (now - bookingTime) / (1000 * 60); // minutes
+    const timeDiff = (now - bookingTime) / (1000 * 60);
 
-    if (timeDiff > timeoutMinutes) {
+    if (timeDiff > timeoutMinutes * 2) { // Allow double timeout for reassigned bookings
       return {
         statusCode: 408,
         headers,
@@ -149,7 +138,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 404,
         headers,
-        body: generateErrorPage('Therapist not found. Please contact support.')
+        body: generateErrorPage('Therapist not found.')
       };
     }
 
@@ -165,7 +154,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers,
-      body: generateErrorPage('An error occurred processing your response. Please contact support at 1300 302542.')
+      body: generateErrorPage('An error occurred. Please contact support at 1300 302542.')
     };
   }
 };
@@ -174,10 +163,7 @@ exports.handler = async (event, context) => {
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log(`✅ Processing booking acceptance: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
-    console.log(`📊 Original therapist: ${booking.therapist_id}, Responding therapist: ${therapist.id}`);
 
-    // Update booking status with full tracking
-    // Note: therapist_id = originally assigned, responding_therapist_id = who actually responded
     const acceptUpdateData = {
       status: 'confirmed',
       therapist_response_time: new Date().toISOString(),
@@ -199,54 +185,37 @@ async function handleBookingAccept(booking, therapist, headers) {
 
     console.log('✅ Booking status updated successfully');
 
-    // Verify the update worked by fetching the updated booking
-    const { data: updatedBooking } = await supabase
-      .from('bookings')
-      .select('status, therapist_response_time, responding_therapist_id, updated_at')
-      .eq('booking_id', booking.booking_id)
-      .single();
-    
-    console.log('📊 Updated booking fields:', updatedBooking);
-
-    // Add status history record (use booking.id, not booking_id)
+    // Add status history
     try {
       await addStatusHistory(booking.id, 'confirmed', therapist.id);
       console.log('✅ Status history added');
     } catch (historyError) {
       console.error('❌ Error adding status history:', historyError);
-      // Don't fail the whole process for this
     }
 
-    // Send confirmation emails (continue even if emails fail)
+    // Send confirmation emails
     console.log('📧 Starting to send confirmation emails...');
     
-    // Send client confirmation email
     try {
       await sendClientConfirmationEmail(booking, therapist);
       console.log('✅ Client confirmation email sent successfully');
     } catch (emailError) {
       console.error('❌ Error sending client confirmation email:', emailError);
-      // Continue with the process even if email fails
     }
 
-    // Send therapist confirmation email  
     try {
       await sendTherapistConfirmationEmail(booking, therapist);
       console.log('✅ Therapist confirmation email sent successfully');
     } catch (emailError) {
       console.error('❌ Error sending therapist confirmation email:', emailError);
-      // Continue with the process even if email fails
     }
 
     // Get service name for display
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
-    } else if (booking.service_name) {
-      serviceName = booking.service_name;
     }
 
-    // Return success page
     return {
       statusCode: 200,
       headers,
@@ -278,22 +247,19 @@ async function handleBookingAccept(booking, therapist, headers) {
 async function handleBookingDecline(booking, therapist, headers) {
   try {
     console.log(`❌ Processing booking decline: ${booking.booking_id} by ${therapist.first_name} ${therapist.last_name}`);
-    console.log(`📊 Original therapist: ${booking.therapist_id}, Responding therapist: ${therapist.id}`);
 
     // Check customer's fallback preference
     if (booking.fallback_option === 'yes') {
-      // Try to find alternative therapist
       const alternativeFound = await findAndAssignAlternativeTherapist(booking, therapist.id);
       
       if (alternativeFound) {
-        // Send "looking for alternate" email to client
         await sendClientLookingForAlternateEmail(booking);
         
         return {
           statusCode: 200,
           headers,
           body: generateSuccessPage(
-            'Booking Declined - Alternative being selected.',
+            'Booking Declined - Alternative Found',
             `Thank you for your response, ${therapist.first_name}. We're contacting an alternative therapist for this booking.`,
             [
               `Booking: ${booking.booking_id}`,
@@ -306,7 +272,6 @@ async function handleBookingDecline(booking, therapist, headers) {
     }
 
     // No alternative found or customer didn't want fallback
-    // Update booking status with full tracking  
     const declineUpdateData = {
       status: 'declined',
       therapist_response_time: new Date().toISOString(),
@@ -324,10 +289,7 @@ async function handleBookingDecline(booking, therapist, headers) {
       throw new Error('Failed to decline booking');
     }
 
-    // Add status history
     await addStatusHistory(booking.id, 'declined', therapist.id);
-
-    // Send decline notification to client
     await sendClientDeclineEmail(booking);
 
     return {
@@ -354,12 +316,11 @@ async function handleBookingDecline(booking, therapist, headers) {
   }
 }
 
-// Enhanced alternative therapist finder
+// Find and assign alternative therapist
 async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
   try {
     console.log(`🔍 Looking for alternative therapist for booking ${booking.booking_id}`);
 
-    // Get available therapists for the same service (excluding the declining therapist)
     const { data: therapistLinks } = await supabase
       .from('therapist_services')
       .select(`
@@ -375,12 +336,10 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
       .map(row => row.therapist_profiles)
       .filter(t => t && t.is_active && t.id !== excludeTherapistId);
 
-    // Filter by gender preference
     if (booking.gender_preference && booking.gender_preference !== 'any') {
       availableTherapists = availableTherapists.filter(t => t.gender === booking.gender_preference);
     }
 
-    // Filter by location if coordinates available
     if (booking.latitude && booking.longitude) {
       availableTherapists = availableTherapists.filter(t => {
         if (!t.latitude || !t.longitude || !t.service_radius_km) return false;
@@ -397,11 +356,9 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
       return false;
     }
 
-    // Select first available alternative
     const alternativeTherapist = availableTherapists[0];
     console.log(`✅ Found alternative: ${alternativeTherapist.first_name} ${alternativeTherapist.last_name}`);
 
-    // Update booking with new therapist
     const alternativeUpdateData = {
       therapist_id: alternativeTherapist.id,
       updated_at: new Date().toISOString()
@@ -417,7 +374,6 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
       return false;
     }
 
-    // Get timeout setting
     const { data: timeoutSetting } = await supabase
       .from('system_settings')
       .select('value')
@@ -426,7 +382,6 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
 
     const timeoutMinutes = timeoutSetting?.value ? parseInt(timeoutSetting.value) : 60;
 
-    // Send booking request to alternative therapist
     await sendTherapistBookingRequest(booking, alternativeTherapist, timeoutMinutes);
 
     return true;
@@ -437,18 +392,16 @@ async function findAndAssignAlternativeTherapist(booking, excludeTherapistId) {
   }
 }
 
-// Email sending functions - IMPROVED ERROR HANDLING
+// Email functions
 async function sendClientConfirmationEmail(booking, therapist) {
   try {
     console.log('📧 Preparing client confirmation email...');
 
-    // Get service name safely
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
     }
 
-    // Prepare template parameters that match your EmailJS template
     const templateParams = {
       to_email: booking.customer_email,
       to_name: `${booking.first_name} ${booking.last_name}`,
@@ -480,7 +433,6 @@ async function sendTherapistConfirmationEmail(booking, therapist) {
   try {
     console.log('📧 Preparing therapist confirmation email...');
 
-    // Get service name safely
     let serviceName = 'Massage Service';
     if (booking.services && booking.services.name) {
       serviceName = booking.services.name;
@@ -570,7 +522,6 @@ async function sendClientLookingForAlternateEmail(booking) {
 
 async function sendTherapistBookingRequest(booking, therapist, timeoutMinutes) {
   try {
-    // Generate Accept/Decline URLs
     const baseUrl = process.env.URL || 'https://your-site.netlify.app';
     const acceptUrl = `${baseUrl}/.netlify/functions/booking-response?action=accept&booking=${booking.booking_id}&therapist=${therapist.id}`;
     const declineUrl = `${baseUrl}/.netlify/functions/booking-response?action=decline&booking=${booking.booking_id}&therapist=${therapist.id}`;
@@ -600,7 +551,7 @@ async function sendTherapistBookingRequest(booking, therapist, timeoutMinutes) {
     };
 
     await sendEmail(EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID, templateParams);
-    console.log(`📧 Booking request sent to alternative therapist: ${therapist.email}`);
+    console.log(`📧 Booking request sent to therapist: ${therapist.email}`);
 
   } catch (error) {
     console.error('❌ Error sending therapist booking request:', error);
@@ -609,7 +560,7 @@ async function sendTherapistBookingRequest(booking, therapist, timeoutMinutes) {
 
 // Helper functions
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -634,39 +585,27 @@ async function addStatusHistory(bookingId, status, userId) {
   }
 }
 
-// IMPROVED Email sending function with correct server-side authentication
 async function sendEmail(templateId, templateParams) {
   try {
     console.log(`📧 Sending email with template: ${templateId}`);
-    console.log(`📧 Template parameters:`, JSON.stringify(templateParams, null, 2));
     
-    // Check if we have private key for server-side authentication
     if (!EMAILJS_PRIVATE_KEY) {
-      console.warn('⚠️ No private key found. EmailJS strict mode requires private key for server-side calls.');
-      console.warn('💡 Add EMAILJS_PRIVATE_KEY to your Netlify environment variables');
-      return { success: false, error: 'Private key required for server-side EmailJS calls' };
+      console.warn('⚠️ No private key found for EmailJS');
+      return { success: false, error: 'Private key required' };
     }
     
-    // Debug: Log the actual keys being used (first few chars only for security)
     console.log('🔑 Using Public Key:', EMAILJS_PUBLIC_KEY?.substring(0, 10) + '...');
     console.log('🔑 Using Private Key:', EMAILJS_PRIVATE_KEY?.substring(0, 10) + '...');
     
-    // Correct server-side authentication: public key in user_id + private key as accessToken
     const emailData = {
       service_id: EMAILJS_SERVICE_ID,
       template_id: templateId,
-      user_id: EMAILJS_PUBLIC_KEY, // Should be: qfM_qA664E4JddSMN
-      accessToken: EMAILJS_PRIVATE_KEY, // Private key goes here for server-side auth
+      user_id: EMAILJS_PUBLIC_KEY,
+      accessToken: EMAILJS_PRIVATE_KEY,
       template_params: templateParams
     };
 
     console.log('📧 Using server-side authentication: Public Key + Private Access Token');
-    console.log('📧 API Call Structure:', {
-      service_id: emailData.service_id,
-      template_id: emailData.template_id,
-      user_id: emailData.user_id?.substring(0, 10) + '...',
-      accessToken: emailData.accessToken ? 'PROVIDED' : 'MISSING'
-    });
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
