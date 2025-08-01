@@ -1372,8 +1372,7 @@ async function populateBookingSummary() {
     <p><strong>Notes:</strong> ${notes}</p>
     <p><strong>Estimated Price:</strong> $${price}</p>
     ${priceBreakdown ? `<div style="margin-left: 20px; font-size: 0.9em; color: #666;">${priceBreakdown}</div>` : ''}
-    <p><strong>Therapist Fee:</strong> ${therapist_fee_display}</p>
-  `;
+      `;
 }
 // Show summary when entering Step 9
 const step9 = document.getElementById('step9');
