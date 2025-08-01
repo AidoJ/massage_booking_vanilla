@@ -1370,7 +1370,7 @@ async function populateBookingSummary() {
     <p><strong>Room Number:</strong> ${roomNumber}</p>
     <p><strong>Booker Name:</strong> ${bookerName}</p>
     <p><strong>Notes:</strong> ${notes}</p>
-    <p><strong>Estimated Price:</strong> $${price}</p>
+    <p><strong>Your Service fees:</strong> $${price}</p>
     ${priceBreakdown ? `<div style="margin-left: 20px; font-size: 0.9em; color: #666;">${priceBreakdown}</div>` : ''}
       `;
 }
