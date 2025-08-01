@@ -1,59 +1,37 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>SMS Test</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; }
-        input, button { padding: 10px; margin: 5px 0; width: 100%; }
-        button { background: #007e8c; color: white; border: none; cursor: pointer; }
-        #result { margin-top: 20px; padding: 10px; border-radius: 5px; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-    </style>
-</head>
-<body>
-    <h2>SMS Test Page</h2>
-    <p>Test your SMS function:</p>
+async function testSMS() {
+    const phone = document.getElementById('phoneNumber').value;
+    const resultDiv = document.getElementById('result');
     
-    <input type="tel" id="phoneNumber" placeholder="Your phone number (+61412345678)" />
-    <button onclick="testSMS()">Send Test SMS</button>
+    if (!phone) {
+        resultDiv.innerHTML = '<div class="error">Please enter your phone number</div>';
+        return;
+    }
     
-    <div id="result"></div>
-
-    <script>
-        async function testSMS() {
-            const phone = document.getElementById('phoneNumber').value;
-            const resultDiv = document.getElementById('result');
-            
-            if (!phone) {
-                resultDiv.innerHTML = '<div class="error">Please enter your phone number</div>';
-                return;
-            }
-            
-            resultDiv.innerHTML = '<div>Sending SMS...</div>';
-            
-            try {
-                const response = await fetch('/.netlify/functions/send-sms', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phone: phone,
-                        message: 'Test SMS from Rejuvenators booking system! 📱'
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    resultDiv.innerHTML = '<div class="success">✅ SMS sent successfully! Check your phone.</div>';
-                } else {
-                    resultDiv.innerHTML = '<div class="error">❌ Error: ' + data.error + '</div>';
-                }
-                
-            } catch (error) {
-                resultDiv.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
-            }
+    resultDiv.innerHTML = '<div>Sending SMS...</div>';
+    
+    try {
+        const response = await fetch('/.netlify/functions/send-sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone: phone,
+                message: 'Test SMS from Rejuvenators booking system! 📱'
+            })
+        });
+        
+        const responseText = await response.text(); // Get raw text instead of JSON
+        console.log('Raw response:', responseText); // Log it to see what we're getting
+        
+        // Try to parse as JSON
+        const data = JSON.parse(responseText);
+        
+        if (data.success) {
+            resultDiv.innerHTML = '<div class="success">✅ SMS sent successfully! Check your phone.</div>';
+        } else {
+            resultDiv.innerHTML = '<div class="error">❌ Error: ' + data.error + '</div>';
         }
-    </script>
-</body>
-</html>
+        
+    } catch (error) {
+        resultDiv.innerHTML = '<div class="error">❌ Parsing Error: ' + error.message + '<br><br>Raw response: ' + responseText + '</div>';
+    }
+}
