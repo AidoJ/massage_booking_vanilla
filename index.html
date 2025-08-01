@@ -93,6 +93,10 @@
         <div class="form-group">
           <label style="font-weight:600; margin-bottom:8px; display:block;">Do you have a therapist gender preference?</label>
           <div class="radio-group horizontal">
+             <label class="radio-inline">
+              <span>Don't mind, just want a great massage</span>
+              <input type="radio" name="genderPref" value="any" checked>
+            </label>
             <label class="radio-inline">
               <span>Female</span>
               <input type="radio" name="genderPref" value="female">
@@ -101,19 +105,15 @@
               <span>Male</span>
               <input type="radio" name="genderPref" value="male">
             </label>
-            <label class="radio-inline">
-              <span>Don't mind, just want a great massage</span>
-              <input type="radio" name="genderPref" value="any" checked>
-            </label>
           </div>
         </div>
         <div class="form-group" style="margin-top:18px;">
           <label style="font-weight:600; margin-bottom:8px; display:block;">
-            If your selected therapist is not available, can we automatically look for a similar therapist for you?
+            If your selected therapist is not available, would you like us to look for a similar therapist for you?
           </label>
           <div class="radio-group">
             <label class="radio-inline" style="font-weight:400;">
-              <input type="radio" name="fallbackOption" value="yes" checked> Yes
+              <input type="radio" name="fallbackOption" value="yes" checked> Yes, happy to accept a similar therapist
             </label>
             <label class="radio-inline" style="font-weight:400;">
               <input type="radio" name="fallbackOption" value="no"> No – I will request a different time with the same therapist
