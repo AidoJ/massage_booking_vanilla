@@ -206,7 +206,61 @@ Client: ${bookingData.first_name} ${bookingData.last_name}
 Service: ${bookingData.service_name} (${bookingData.duration_minutes}min)
 Date: ${bookingData.booking_date} ${bookingData.booking_time}
 Location: ${bookingData.address}
-Fee: ${bookingData.therapist_fee ? '$' + parseFloat(bookingData.therapis
+Fee: ${bookingData.therapist_fee ? '$' + parseFloat(bookingData.therapist_fee).toFixed(2) : 'TBD'}
+
+You have ${timeoutMinutes} minutes to respond.
+Check your email for full details and accept/decline links.
+
+- Rejuvenators`;
+
+    console.log('📱 Sending therapist SMS to:', formattedPhone);
+    
+    const response = await fetch('/.netlify/functions/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: formattedPhone,
+        message: message
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Therapist SMS sent successfully');
+      return { success: true, sid: result.sid };
+    } else {
+      console.error('❌ Therapist SMS failed:', result.error);
+      return { success: false, error: result.error };
+    }
+    
+  } catch (error) {
+    console.error('❌ Error sending therapist SMS:', error);
+    return { success: false, error: error.message };
+  }
+},
+
+// NEW: Format phone number helper function
+formatPhoneNumber(phone) {
+  if (!phone) return null;
+  
+  // Remove all non-digits
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Add Australian country code if missing
+  if (cleaned.length === 10 && cleaned.startsWith('0')) {
+    return '+61' + cleaned.substring(1); // Remove leading 0, add +61
+  } else if (cleaned.length === 9) {
+    return '+61' + cleaned; // Add +61
+  } else if (cleaned.length === 12 && cleaned.startsWith('61')) {
+    return '+' + cleaned; // Add +
+  } else if (cleaned.startsWith('+61')) {
+    return cleaned; // Already formatted
+  }
+  
+  return phone; // Return as-is if unsure
+},
+
   // Send Email 3: Booking Confirmation to Customer (when therapist accepts)
   async sendBookingConfirmationToCustomer(bookingData) {
     console.log('📧 Sending booking confirmation to customer...', bookingData);
