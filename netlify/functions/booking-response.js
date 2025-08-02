@@ -221,7 +221,7 @@ async function verifyTherapistCanRespond(booking, therapistId) {
   }
 }
 
-// Handle booking acceptance
+// Handle booking acceptance - UPDATED to include SMS confirmations
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log('✅ Processing booking acceptance:', booking.booking_id, 'by', therapist.first_name, therapist.last_name);
@@ -252,15 +252,70 @@ async function handleBookingAccept(booking, therapist, headers) {
     // Add status history
     try {
       const historyNote = (booking.status === 'timeout_reassigned' || booking.status === 'seeking_alternate') ? 
-        'Accepted by alternate therapist' : 
-        'Accepted by original therapist';
+        'Accepted by alternate therapist via email' : 
+        'Accepted by original therapist via email';
       await addStatusHistory(booking.id, 'confirmed', therapist.id, historyNote);
       console.log('✅ Status history added');
     } catch (historyError) {
       console.error('❌ Error adding status history:', historyError);
     }
 
-    // Send confirmation emails
+    // *** NEW: Send SMS confirmations FIRST ***
+    console.log('📱 Starting to send SMS confirmations...');
+    
+    // Send SMS to therapist
+    try {
+      // Get therapist phone from database
+      const { data: therapistData } = await supabase
+        .from('therapist_profiles')
+        .select('phone')
+        .eq('id', therapist.id)
+        .single();
+
+      if (therapistData && therapistData.phone) {
+        console.log('📱 Sending SMS confirmation to therapist:', therapistData.phone);
+        
+        const therapistSMSMessage = `✅ BOOKING CONFIRMED!
+
+You've accepted booking ${booking.booking_id}
+Client: ${booking.first_name} ${booking.last_name}
+Date: ${new Date(booking.booking_time).toLocaleDateString()} at ${new Date(booking.booking_time).toLocaleTimeString()}
+Fee: $${booking.therapist_fee || 'TBD'}
+
+Client will be notified. Check email for full details.
+- Rejuvenators`;
+
+        await sendSMSNotification(therapistData.phone, therapistSMSMessage);
+        console.log('✅ Therapist SMS confirmation sent');
+      } else {
+        console.log('❌ No therapist phone number found for SMS');
+      }
+    } catch (smsError) {
+      console.error('❌ Error sending therapist SMS:', smsError);
+    }
+
+    // Send SMS to customer
+    if (booking.customer_phone) {
+      try {
+        console.log('📱 Sending SMS confirmation to customer:', booking.customer_phone);
+        
+        const customerSMSMessage = `🎉 BOOKING CONFIRMED!
+
+${therapist.first_name} ${therapist.last_name} has accepted your massage booking for ${new Date(booking.booking_time).toLocaleDateString()} at ${new Date(booking.booking_time).toLocaleTimeString()}.
+
+Check your email for full details!
+- Rejuvenators`;
+
+        await sendSMSNotification(booking.customer_phone, customerSMSMessage);
+        console.log('✅ Customer SMS confirmation sent');
+      } catch (smsError) {
+        console.error('❌ Error sending customer SMS:', smsError);
+      }
+    } else {
+      console.log('❌ No customer phone number found for SMS');
+    }
+
+    // Send confirmation emails (existing functionality)
     console.log('📧 Starting to send confirmation emails...');
     
     try {
@@ -300,7 +355,9 @@ async function handleBookingAccept(booking, therapist, headers) {
           'Date: ' + new Date(booking.booking_time).toLocaleString(),
           'Location: ' + booking.address,
           'Room: ' + (booking.room_number || 'N/A'),
-          'Your Fee: $' + (booking.therapist_fee || 'TBD')
+          'Your Fee: $' + (booking.therapist_fee || 'TBD'),
+          '', // Empty line
+          '✅ SMS and email confirmations sent to both you and the client'
         ]
       )
     };
@@ -315,7 +372,7 @@ async function handleBookingAccept(booking, therapist, headers) {
   }
 }
 
-// Handle booking decline with multiple therapist approach
+/ Handle booking decline with SMS notifications
 async function handleBookingDecline(booking, therapist, headers) {
   try {
     console.log('❌ Processing booking decline:', booking.booking_id, 'by', therapist.first_name, therapist.last_name);
@@ -325,7 +382,7 @@ async function handleBookingDecline(booking, therapist, headers) {
       console.log('📝 Recording decline for alternate booking - other therapists can still respond');
       
       await addStatusHistory(booking.id, 'therapist_declined', therapist.id, 
-        therapist.first_name + ' ' + therapist.last_name + ' declined alternate booking');
+        therapist.first_name + ' ' + therapist.last_name + ' declined alternate booking via email');
 
       return {
         statusCode: 200,
@@ -354,10 +411,27 @@ async function handleBookingDecline(booking, therapist, headers) {
         // 1. FIRST: Send "Looking for Alternate" email to customer
         await sendClientLookingForAlternateEmail(booking);
         
+        // *** NEW: Send SMS to customer about looking for alternatives ***
+        if (booking.customer_phone) {
+          try {
+            const customerSMSMessage = `📱 BOOKING UPDATE
+
+Your therapist for booking ${booking.booking_id} declined, but we're looking for alternatives now. We found ${availableTherapists.length} available therapists and are contacting them.
+
+You'll be notified once someone accepts!
+- Rejuvenators`;
+
+            await sendSMSNotification(booking.customer_phone, customerSMSMessage);
+            console.log('✅ Customer SMS about alternatives sent');
+          } catch (smsError) {
+            console.error('❌ Error sending customer SMS about alternatives:', smsError);
+          }
+        }
+        
         // 2. Update booking status to prevent reprocessing
         await updateBookingStatus(booking.booking_id, 'seeking_alternate');
         await addStatusHistory(booking.id, 'seeking_alternate', therapist.id, 
-          therapist.first_name + ' ' + therapist.last_name + ' declined - searching ' + availableTherapists.length + ' alternatives');
+          therapist.first_name + ' ' + therapist.last_name + ' declined via email - searching ' + availableTherapists.length + ' alternatives');
         
         // 3. Send booking requests to ALL available therapists
         const { data: timeoutSetting } = await supabase
@@ -380,7 +454,8 @@ async function handleBookingDecline(booking, therapist, headers) {
               'Booking: ' + booking.booking_id,
               'Client: ' + booking.first_name + ' ' + booking.last_name,
               availableTherapists.length + ' alternative therapists contacted',
-              'Customer has been notified we are looking for alternatives'
+              'Customer has been notified we are looking for alternatives',
+              '📱 SMS and email notifications sent to customer'
             ]
           )
         };
@@ -389,7 +464,7 @@ async function handleBookingDecline(booking, therapist, headers) {
       }
     }
 
-    // No alternative found or customer didn't want fallback - send decline
+    // No alternative found or customer didn't want fallback - send final decline
     console.log('📧 Sending final decline email to customer for', booking.booking_id);
     
     const declineUpdateData = {
@@ -409,8 +484,27 @@ async function handleBookingDecline(booking, therapist, headers) {
       throw new Error('Failed to decline booking');
     }
 
-    await addStatusHistory(booking.id, 'declined', therapist.id, 'No alternatives available or customer declined fallback');
+    await addStatusHistory(booking.id, 'declined', therapist.id, 'No alternatives available or customer declined fallback - declined via email');
+    
+    // Send decline email
     await sendClientDeclineEmail(booking);
+
+    // *** NEW: Send decline SMS to customer ***
+    if (booking.customer_phone) {
+      try {
+        const customerSMSMessage = `❌ BOOKING UPDATE
+
+Unfortunately, your massage booking ${booking.booking_id} has been declined and no alternative therapists are available.
+
+Please contact us at 1300 302542 to reschedule.
+- Rejuvenators`;
+
+        await sendSMSNotification(booking.customer_phone, customerSMSMessage);
+        console.log('✅ Customer decline SMS sent');
+      } catch (smsError) {
+        console.error('❌ Error sending customer decline SMS:', smsError);
+      }
+    }
 
     return {
       statusCode: 200,
@@ -421,7 +515,7 @@ async function handleBookingDecline(booking, therapist, headers) {
         [
           'Booking: ' + booking.booking_id,
           'Client: ' + booking.first_name + ' ' + booking.last_name,
-          'Client has been notified of the decline.'
+          'Client has been notified of the decline via email and SMS.'
         ]
       )
     };
@@ -436,6 +530,40 @@ async function handleBookingDecline(booking, therapist, headers) {
   }
 }
 
+// *** NEW: SMS sending function for booking-response.js ***
+async function sendSMSNotification(phoneNumber, message) {
+  try {
+    console.log(`📱 Sending SMS notification to ${phoneNumber}`);
+    console.log(`📄 Message preview: ${message.substring(0, 100)}...`);
+    
+    const response = await fetch('https://rmmbookingplatform.netlify.app/.netlify/functions/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneNumber, message: message })
+    });
+    
+    const result = await response.json();
+    console.log('📱 SMS API response:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending SMS notification:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Utility function to format phone numbers for SMS
+function formatPhoneForSMS(phone) {
+  if (!phone) return null;
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10 && cleaned.startsWith('0')) {
+    return '+61' + cleaned.substring(1);
+  } else if (cleaned.length === 9) {
+    return '+61' + cleaned;
+  } else if (phone.startsWith('+61')) {
+    return phone;
+  }
+  return phone;
+}
 // UPDATED: booking-response.js - Fixed to check actual time slot availability
 // Replace the findAllAvailableTherapists function in your booking-response.js with this version:
 
