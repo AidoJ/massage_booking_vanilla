@@ -1,4 +1,4 @@
-// COMPLETE UPDATED booking-response.js file - SYNTAX CORRECTED
+// COMPLETE booking-response.js file with SMS functionality added
 // Replace your entire netlify/functions/booking-response.js with this code
 
 const { createClient } = require('@supabase/supabase-js');
@@ -116,7 +116,7 @@ exports.handler = async (event, context) => {
     // Get therapist details
     const { data: therapist, error: therapistError } = await supabase
       .from('therapist_profiles')
-      .select('id, first_name, last_name, email')
+      .select('id, first_name, last_name, email, phone')
       .eq('id', therapistId)
       .single();
 
@@ -221,7 +221,7 @@ async function verifyTherapistCanRespond(booking, therapistId) {
   }
 }
 
-// Handle booking acceptance - UPDATED to include SMS confirmations
+// Handle booking acceptance WITH SMS notifications
 async function handleBookingAccept(booking, therapist, headers) {
   try {
     console.log('✅ Processing booking acceptance:', booking.booking_id, 'by', therapist.first_name, therapist.last_name);
@@ -260,20 +260,30 @@ async function handleBookingAccept(booking, therapist, headers) {
       console.error('❌ Error adding status history:', historyError);
     }
 
-    // *** NEW: Send SMS confirmations FIRST ***
+    // Send confirmation emails
+    console.log('📧 Starting to send confirmation emails...');
+    
+    try {
+      await sendClientConfirmationEmail(booking, therapist);
+      console.log('✅ Client confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('❌ Error sending client confirmation email:', emailError);
+    }
+
+    try {
+      await sendTherapistConfirmationEmail(booking, therapist);
+      console.log('✅ Therapist confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('❌ Error sending therapist confirmation email:', emailError);
+    }
+
+    // *** NEW: Send SMS confirmations ***
     console.log('📱 Starting to send SMS confirmations...');
     
     // Send SMS to therapist
-    try {
-      // Get therapist phone from database
-      const { data: therapistData } = await supabase
-        .from('therapist_profiles')
-        .select('phone')
-        .eq('id', therapist.id)
-        .single();
-
-      if (therapistData && therapistData.phone) {
-        console.log('📱 Sending SMS confirmation to therapist:', therapistData.phone);
+    if (therapist.phone) {
+      try {
+        console.log('📱 Sending SMS confirmation to therapist:', therapist.phone);
         
         const therapistSMSMessage = `✅ BOOKING CONFIRMED!
 
@@ -285,13 +295,13 @@ Fee: $${booking.therapist_fee || 'TBD'}
 Client will be notified. Check email for full details.
 - Rejuvenators`;
 
-        await sendSMSNotification(therapistData.phone, therapistSMSMessage);
+        await sendSMSNotification(therapist.phone, therapistSMSMessage);
         console.log('✅ Therapist SMS confirmation sent');
-      } else {
-        console.log('❌ No therapist phone number found for SMS');
+      } catch (smsError) {
+        console.error('❌ Error sending therapist SMS:', smsError);
       }
-    } catch (smsError) {
-      console.error('❌ Error sending therapist SMS:', smsError);
+    } else {
+      console.log('❌ No therapist phone number found for SMS');
     }
 
     // Send SMS to customer
@@ -313,23 +323,6 @@ Check your email for full details!
       }
     } else {
       console.log('❌ No customer phone number found for SMS');
-    }
-
-    // Send confirmation emails (existing functionality)
-    console.log('📧 Starting to send confirmation emails...');
-    
-    try {
-      await sendClientConfirmationEmail(booking, therapist);
-      console.log('✅ Client confirmation email sent successfully');
-    } catch (emailError) {
-      console.error('❌ Error sending client confirmation email:', emailError);
-    }
-
-    try {
-      await sendTherapistConfirmationEmail(booking, therapist);
-      console.log('✅ Therapist confirmation email sent successfully');
-    } catch (emailError) {
-      console.error('❌ Error sending therapist confirmation email:', emailError);
     }
 
     // Get service name for display
@@ -356,7 +349,7 @@ Check your email for full details!
           'Location: ' + booking.address,
           'Room: ' + (booking.room_number || 'N/A'),
           'Your Fee: $' + (booking.therapist_fee || 'TBD'),
-          '', // Empty line
+          '',
           '✅ SMS and email confirmations sent to both you and the client'
         ]
       )
@@ -372,7 +365,7 @@ Check your email for full details!
   }
 }
 
-/ Handle booking decline with SMS notifications
+// Handle booking decline with multiple therapist approach
 async function handleBookingDecline(booking, therapist, headers) {
   try {
     console.log('❌ Processing booking decline:', booking.booking_id, 'by', therapist.first_name, therapist.last_name);
@@ -382,7 +375,7 @@ async function handleBookingDecline(booking, therapist, headers) {
       console.log('📝 Recording decline for alternate booking - other therapists can still respond');
       
       await addStatusHistory(booking.id, 'therapist_declined', therapist.id, 
-        therapist.first_name + ' ' + therapist.last_name + ' declined alternate booking via email');
+        therapist.first_name + ' ' + therapist.last_name + ' declined alternate booking');
 
       return {
         statusCode: 200,
@@ -431,7 +424,7 @@ You'll be notified once someone accepts!
         // 2. Update booking status to prevent reprocessing
         await updateBookingStatus(booking.booking_id, 'seeking_alternate');
         await addStatusHistory(booking.id, 'seeking_alternate', therapist.id, 
-          therapist.first_name + ' ' + therapist.last_name + ' declined via email - searching ' + availableTherapists.length + ' alternatives');
+          therapist.first_name + ' ' + therapist.last_name + ' declined - searching ' + availableTherapists.length + ' alternatives');
         
         // 3. Send booking requests to ALL available therapists
         const { data: timeoutSetting } = await supabase
@@ -464,7 +457,7 @@ You'll be notified once someone accepts!
       }
     }
 
-    // No alternative found or customer didn't want fallback - send final decline
+    // No alternative found or customer didn't want fallback - send decline
     console.log('📧 Sending final decline email to customer for', booking.booking_id);
     
     const declineUpdateData = {
@@ -484,9 +477,7 @@ You'll be notified once someone accepts!
       throw new Error('Failed to decline booking');
     }
 
-    await addStatusHistory(booking.id, 'declined', therapist.id, 'No alternatives available or customer declined fallback - declined via email');
-    
-    // Send decline email
+    await addStatusHistory(booking.id, 'declined', therapist.id, 'No alternatives available or customer declined fallback');
     await sendClientDeclineEmail(booking);
 
     // *** NEW: Send decline SMS to customer ***
@@ -530,40 +521,6 @@ Please contact us at 1300 302542 to reschedule.
   }
 }
 
-// *** NEW: SMS sending function for booking-response.js ***
-async function sendSMSNotification(phoneNumber, message) {
-  try {
-    console.log(`📱 Sending SMS notification to ${phoneNumber}`);
-    console.log(`📄 Message preview: ${message.substring(0, 100)}...`);
-    
-    const response = await fetch('https://rmmbookingplatform.netlify.app/.netlify/functions/send-sms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phoneNumber, message: message })
-    });
-    
-    const result = await response.json();
-    console.log('📱 SMS API response:', result);
-    return result;
-  } catch (error) {
-    console.error('❌ Error sending SMS notification:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Utility function to format phone numbers for SMS
-function formatPhoneForSMS(phone) {
-  if (!phone) return null;
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 10 && cleaned.startsWith('0')) {
-    return '+61' + cleaned.substring(1);
-  } else if (cleaned.length === 9) {
-    return '+61' + cleaned;
-  } else if (phone.startsWith('+61')) {
-    return phone;
-  }
-  return phone;
-}
 // UPDATED: booking-response.js - Fixed to check actual time slot availability
 // Replace the findAllAvailableTherapists function in your booking-response.js with this version:
 
@@ -910,6 +867,27 @@ async function sendTherapistBookingRequest(booking, therapist, timeoutMinutes) {
 
   } catch (error) {
     console.error('❌ Error sending therapist booking request:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// *** NEW: SMS notification function ***
+async function sendSMSNotification(phoneNumber, message) {
+  try {
+    console.log(`📱 Sending SMS notification to ${phoneNumber}`);
+    console.log(`📄 Message preview: ${message.substring(0, 100)}...`);
+    
+    const response = await fetch('https://rmmbookingplatform.netlify.app/.netlify/functions/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneNumber, message: message })
+    });
+    
+    const result = await response.json();
+    console.log('📱 SMS API response:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending SMS notification:', error);
     return { success: false, error: error.message };
   }
 }
