@@ -199,18 +199,21 @@ async sendTherapistBookingRequestSMS(therapistPhone, bookingData, therapistData,
       return { success: false, error: 'Invalid phone number format' };
     }
     
-    // Create concise SMS message
-    const message = `🟢 NEW BOOKING REQUEST
+    // Create SMS message with accept/decline options
+const message = `🟢 NEW BOOKING REQUEST
 
 Client: ${bookingData.first_name} ${bookingData.last_name}
 Service: ${bookingData.service_name} (${bookingData.duration_minutes}min)
 Date: ${bookingData.booking_date} ${bookingData.booking_time}
 Location: ${bookingData.address}
+Room: ${bookingData.room_number || 'N/A'}
 Fee: ${bookingData.therapist_fee ? '$' + parseFloat(bookingData.therapist_fee).toFixed(2) : 'TBD'}
 
-You have ${timeoutMinutes} minutes to respond.
-Check your email for full details and accept/decline links.
+⚡ QUICK RESPONSE (${timeoutMinutes} min):
+Reply "ACCEPT ${bookingData.booking_id}" to accept
+Reply "DECLINE ${bookingData.booking_id}" to decline
 
+Or use email links as backup.
 - Rejuvenators`;
 
     console.log('📱 Sending therapist SMS to:', formattedPhone);
