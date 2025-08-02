@@ -80,82 +80,133 @@ const EmailService = {
     }
   },
 
-  // Send Email 2: Booking Request to Selected Therapist (including therapist fees)
-  async sendTherapistBookingRequest(bookingData, therapistData, timeoutMinutes) {
-    console.log('📧 Sending therapist booking request...', { bookingData, therapistData, timeoutMinutes });
+  // Send Email 2: Booking Request to Selected Therapist (including therapist fees) + SMS
+async sendTherapistBookingRequest(bookingData, therapistData, timeoutMinutes) {
+  console.log('📧📱 Sending therapist booking request (email + SMS)...', { bookingData, therapistData, timeoutMinutes });
+  
+  // Ensure EmailJS is initialized
+  if (typeof emailjs === 'undefined') {
+    console.error('❌ EmailJS not loaded');
+    return { success: false, error: 'EmailJS not loaded' };
+  }
+  
+  try {
+    // Generate Accept/Decline URLs
+    const baseUrl = window.location.origin;
+    const acceptUrl = `${baseUrl}/.netlify/functions/booking-response?action=accept&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
+    const declineUrl = `${baseUrl}/.netlify/functions/booking-response?action=decline&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
     
-    // Ensure EmailJS is initialized
-    if (typeof emailjs === 'undefined') {
-      console.error('❌ EmailJS not loaded');
-      return { success: false, error: 'EmailJS not loaded' };
+    // Calculate therapist fee
+    const therapistFee = bookingData.therapist_fee ? `$${parseFloat(bookingData.therapist_fee).toFixed(2)}` : 'TBD';
+    
+    // Format client phone for display
+    const clientPhone = bookingData.customer_phone || 'Not provided';
+    
+    // Determine booking type display
+    let bookingTypeDisplay = bookingData.booking_type || 'Standard Booking';
+    if (bookingTypeDisplay === 'Hotel/Accommodation') {
+      bookingTypeDisplay = '🏨 Hotel/Accommodation';
+    } else if (bookingTypeDisplay === 'In-home') {
+      bookingTypeDisplay = '🏠 In-Home Service';
+    } else if (bookingTypeDisplay === 'Corporate Event/Office') {
+      bookingTypeDisplay = '🏢 Corporate/Office';
     }
     
+    // Send email parameters that match the therapist template variables
+    const templateParams = {
+      to_email: therapistData.email,
+      to_name: `${therapistData.first_name} ${therapistData.last_name}`,
+      therapist_name: `${therapistData.first_name} ${therapistData.last_name}`,
+      booking_id: bookingData.booking_id,
+      client_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim(),
+      client_phone: clientPhone,
+      service_name: bookingData.service_name || 'Massage Service',
+      duration: `${bookingData.duration_minutes || 60} minutes`,
+      booking_date: bookingData.booking_date || new Date().toLocaleDateString(),
+      booking_time: bookingData.booking_time || '09:00',
+      address: bookingData.address || 'Address not provided',
+      business_name: bookingData.business_name || 'Private Residence',
+      booking_type: bookingTypeDisplay,
+      room_number: bookingData.room_number || 'N/A',
+      booker_name: bookingData.booker_name || 'N/A',
+      parking: bookingData.parking || 'Unknown',
+      notes: bookingData.notes || 'No special notes',
+      therapist_fee: therapistFee,
+      timeout_minutes: timeoutMinutes || 60,
+      accept_url: acceptUrl,
+      decline_url: declineUrl
+    };
+    
+    console.log('📧 Therapist email template parameters:', templateParams);
+    console.log('📧 Using template ID:', EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID);
+    
+    // Send email
+    const emailResponse = await emailjs.send(
+      EMAILJS_SERVICE_ID, 
+      EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID, 
+      templateParams
+    );
+    
+    console.log('✅ Therapist email sent successfully:', emailResponse);
+    
+    // NEW: Also send SMS notification to therapist
+    let smsResponse = { success: false };
+    
+    // Try to get therapist phone from database
     try {
-      // Generate Accept/Decline URLs
-      const baseUrl = window.location.origin;
-      const acceptUrl = `${baseUrl}/.netlify/functions/booking-response?action=accept&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
-      const declineUrl = `${baseUrl}/.netlify/functions/booking-response?action=decline&booking=${bookingData.booking_id}&therapist=${therapistData.id}`;
+      const { data: therapistProfile } = await window.supabase
+        .from('therapist_profiles')
+        .select('phone')
+        .eq('id', therapistData.id)
+        .single();
       
-      // Calculate therapist fee
-      const therapistFee = bookingData.therapist_fee ? `$${parseFloat(bookingData.therapist_fee).toFixed(2)}` : 'TBD';
-      
-      // Format client phone for display
-      const clientPhone = bookingData.customer_phone || 'Not provided';
-      
-      // Determine booking type display
-      let bookingTypeDisplay = bookingData.booking_type || 'Standard Booking';
-      if (bookingTypeDisplay === 'Hotel/Accommodation') {
-        bookingTypeDisplay = '🏨 Hotel/Accommodation';
-      } else if (bookingTypeDisplay === 'In-home') {
-        bookingTypeDisplay = '🏠 In-Home Service';
-      } else if (bookingTypeDisplay === 'Corporate Event/Office') {
-        bookingTypeDisplay = '🏢 Corporate/Office';
+      if (therapistProfile && therapistProfile.phone) {
+        console.log('📱 Sending SMS to therapist...');
+        smsResponse = await this.sendTherapistBookingRequestSMS(
+          therapistProfile.phone,
+          bookingData,
+          therapistData,
+          timeoutMinutes
+        );
+      } else {
+        console.log('📱 No phone number found for therapist, skipping SMS');
       }
-      
-      // Send parameters that match the therapist template variables
-      const templateParams = {
-        to_email: therapistData.email,
-        to_name: `${therapistData.first_name} ${therapistData.last_name}`,
-        therapist_name: `${therapistData.first_name} ${therapistData.last_name}`,
-        booking_id: bookingData.booking_id,
-        client_name: `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim(),
-        client_phone: clientPhone,
-        service_name: bookingData.service_name || 'Massage Service',
-        duration: `${bookingData.duration_minutes || 60} minutes`,
-        booking_date: bookingData.booking_date || new Date().toLocaleDateString(),
-        booking_time: bookingData.booking_time || '09:00',
-        address: bookingData.address || 'Address not provided',
-        business_name: bookingData.business_name || 'Private Residence',
-        booking_type: bookingTypeDisplay,
-        room_number: bookingData.room_number || 'N/A',
-        booker_name: bookingData.booker_name || 'N/A',
-        parking: bookingData.parking || 'Unknown',
-        notes: bookingData.notes || 'No special notes',
-        therapist_fee: therapistFee,
-        timeout_minutes: timeoutMinutes || 60,
-        accept_url: acceptUrl,
-        decline_url: declineUrl
-      };
-      
-      console.log('📧 Therapist email template parameters:', templateParams);
-      console.log('📧 Using template ID:', EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID);
-      console.log('📧 Using service ID:', EMAILJS_SERVICE_ID);
-      
-      const response = await emailjs.send(
-        EMAILJS_SERVICE_ID, 
-        EMAILJS_THERAPIST_REQUEST_TEMPLATE_ID, 
-        templateParams
-      );
-      
-      console.log('✅ Therapist email sent successfully:', response);
-      console.log('📧 Full response details:', JSON.stringify(response, null, 2));
-      return { success: true, message: 'Therapist email sent successfully', response };
     } catch (error) {
-      console.error('❌ Error sending therapist email:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error fetching therapist phone:', error);
     }
-  },
+    
+    return { 
+      success: true, 
+      message: 'Therapist notification sent successfully', 
+      emailResponse,
+      smsResponse,
+      emailSent: true,
+      smsSent: smsResponse.success
+    };
+    
+  } catch (error) {
+    console.error('❌ Error sending therapist notification:', error);
+    return { success: false, error: error.message };
+  }
+},
 
+// NEW: Send SMS booking request to therapist
+async sendTherapistBookingRequestSMS(therapistPhone, bookingData, therapistData, timeoutMinutes) {
+  try {
+    // Format phone number
+    const formattedPhone = this.formatPhoneNumber(therapistPhone);
+    if (!formattedPhone) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+    
+    // Create concise SMS message
+    const message = `🟢 NEW BOOKING REQUEST
+
+Client: ${bookingData.first_name} ${bookingData.last_name}
+Service: ${bookingData.service_name} (${bookingData.duration_minutes}min)
+Date: ${bookingData.booking_date} ${bookingData.booking_time}
+Location: ${bookingData.address}
+Fee: ${bookingData.therapist_fee ? '$' + parseFloat(bookingData.therapis
   // Send Email 3: Booking Confirmation to Customer (when therapist accepts)
   async sendBookingConfirmationToCustomer(bookingData) {
     console.log('📧 Sending booking confirmation to customer...', bookingData);
