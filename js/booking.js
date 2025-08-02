@@ -1665,9 +1665,9 @@ function hideCustomerLookup() {
   emailStatus.innerHTML = '';
 }
 
-// Send booking notifications via EmailJS
+// Send booking notifications via EmailJS AND SMS
 async function sendBookingNotifications(bookingData, bookingId) {
-  console.log('📧 Starting enhanced email notifications...', { bookingData, bookingId });
+  console.log('📧📱 Starting enhanced email + SMS notifications...', { bookingData, bookingId });
   
   try {
     // Prepare email data with ALL required fields for the template
@@ -1684,7 +1684,6 @@ async function sendBookingNotifications(bookingData, bookingId) {
       booking_date: bookingData.booking_date || new Date().toISOString().split('T')[0],
       booking_time: bookingData.booking_time || '09:00',
       total_price: bookingData.price ? `$${bookingData.price.toFixed(2)}` : 'N/A',
-      // Add missing fields that the template expects
       address: bookingData.address || 'N/A',
       business_name: bookingData.business_name || '',
       room_number: bookingData.room_number || '',
@@ -1695,11 +1694,25 @@ async function sendBookingNotifications(bookingData, bookingId) {
       duration_minutes: bookingData.duration_minutes || '60'
     };
     
-    // Send client confirmation email
+    // Send client confirmation email (existing)
     console.log('📧 Sending client confirmation email...');
     const clientEmailResult = await window.EmailService.sendBookingRequestReceived(emailData);
     
-    // Send therapist request email
+    // NEW: Send SMS confirmation to customer
+    let customerSMSResult = { success: false };
+    if (bookingData.customer_phone) {
+      console.log('📱 Sending customer confirmation SMS...');
+      const formattedPhone = formatPhoneNumber(bookingData.customer_phone);
+      if (formattedPhone) {
+        customerSMSResult = await sendCustomerBookingConfirmationSMS(
+          formattedPhone,
+          emailData.customer_name,
+          bookingId
+        );
+      }
+    }
+    
+    // Send therapist request email (existing)
     console.log('📧 Sending therapist request email...');
     let therapistEmailResult = { success: false, error: 'No therapist data available' };
     
@@ -1718,7 +1731,7 @@ async function sendBookingNotifications(bookingData, bookingId) {
           therapistEmailResult = await window.EmailService.sendTherapistBookingRequest(
             emailData, 
             therapistData, 
-            window.therapistResponseTimeoutMinutes || 3 // Use database setting, default 3 minutes
+            window.therapistResponseTimeoutMinutes || 3
           );
         } else {
           console.error('❌ Error fetching therapist data:', therapistError);
@@ -1734,17 +1747,71 @@ async function sendBookingNotifications(bookingData, bookingId) {
     const results = {
       success: clientEmailResult.success,
       clientEmail: clientEmailResult,
+      customerSMS: customerSMSResult,
       therapistEmail: therapistEmailResult,
       therapistEmailSent: therapistEmailResult.success
     };
     
-    console.log('📧 Email notification results:', results);
+    console.log('📧📱 Email + SMS notification results:', results);
     return results;
     
   } catch (error) {
     console.error('❌ Error in sendBookingNotifications:', error);
     return { success: false, error: error.message };
   }
+}
+
+// NEW: Send SMS confirmation to customer when booking is received
+async function sendCustomerBookingConfirmationSMS(customerPhone, customerName, bookingId) {
+  try {
+    const message = `Hi ${customerName}! Your massage booking ${bookingId} has been received. We're finding you a therapist now. You'll get updates via SMS! - Rejuvenators`;
+    
+    console.log('📱 Sending booking confirmation SMS to:', customerPhone);
+    
+    const response = await fetch('/.netlify/functions/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: customerPhone,
+        message: message
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Customer SMS sent successfully');
+      return { success: true, sid: result.sid };
+    } else {
+      console.error('❌ Customer SMS failed:', result.error);
+      return { success: false, error: result.error };
+    }
+    
+  } catch (error) {
+    console.error('❌ Error sending customer SMS:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// NEW: Format phone number for SMS (Australian format)
+function formatPhoneNumber(phone) {
+  if (!phone) return null;
+  
+  // Remove all non-digits
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Add Australian country code if missing
+  if (cleaned.length === 10 && cleaned.startsWith('0')) {
+    return '+61' + cleaned.substring(1); // Remove leading 0, add +61
+  } else if (cleaned.length === 9) {
+    return '+61' + cleaned; // Add +61
+  } else if (cleaned.length === 12 && cleaned.startsWith('61')) {
+    return '+' + cleaned; // Add +
+  } else if (cleaned.startsWith('+61')) {
+    return cleaned; // Already formatted
+  }
+  
+  return phone; // Return as-is if unsure
 }
 
 // Booking submission logic
