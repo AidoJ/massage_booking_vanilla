@@ -7,6 +7,19 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 
+// *** ADD EmailJS Configuration (copied from booking-response.js) ***
+const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || 'service_puww2kb';
+const EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID || 'template_confirmed';
+const EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID = process.env.EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID || 'template_therapist_ok';
+const EMAILJS_BOOKING_DECLINED_TEMPLATE_ID = process.env.EMAILJS_BOOKING_DECLINED_TEMPLATE_ID || 'template_declined';
+const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || 'qfM_qA664E4JddSMN';
+const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
+
+console.log('📧 EmailJS Configuration:');
+console.log('Service ID:', EMAILJS_SERVICE_ID);
+console.log('Public Key:', EMAILJS_PUBLIC_KEY);
+console.log('Private Key:', EMAILJS_PRIVATE_KEY ? '✅ Configured' : '❌ Missing');
+
 exports.handler = async (event, context) => {
   console.log('📱 SMS webhook received');
   
@@ -167,10 +180,10 @@ async function processBookingResponse(action, bookingId, therapist, therapistPho
   try {
     console.log('🔄 Processing', action, 'for booking', bookingId, 'from therapist', therapist.first_name);
     
-    // Get booking details
+    // Get booking details WITH services data for emails
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('*')
+      .select('*, services(*)')
       .eq('booking_id', bookingId)
       .single();
 
@@ -188,7 +201,8 @@ async function processBookingResponse(action, bookingId, therapist, therapistPho
       id: booking.id,
       status: booking.status,
       customer: `${booking.first_name} ${booking.last_name}`,
-      customer_phone: booking.customer_phone
+      customer_phone: booking.customer_phone,
+      customer_email: booking.customer_email
     });
 
     // Check booking status
@@ -216,7 +230,7 @@ async function processBookingResponse(action, bookingId, therapist, therapistPho
   }
 }
 
-// Handle SMS acceptance
+// *** UPDATED: Handle SMS acceptance WITH EMAIL SENDING ***
 async function handleSMSAccept(booking, therapist, therapistPhone) {
   try {
     console.log('✅ Processing SMS acceptance for', booking.booking_id);
@@ -244,7 +258,7 @@ async function handleSMSAccept(booking, therapist, therapistPhone) {
     await addStatusHistory(booking.id, 'confirmed', therapist.id, 'Accepted via SMS');
 
     // Send confirmation SMS to therapist
-    console.log('📱 Sending confirmation to therapist...');
+    console.log('📱 Sending confirmation SMS to therapist...');
     const confirmMessage = `✅ BOOKING CONFIRMED!
 
 You've accepted booking ${booking.booking_id}
@@ -264,7 +278,7 @@ Client will be notified. Check email for full details.
     console.log('📞 Customer phone (formatted):', customerPhone);
     
     if (customerPhone) {
-      console.log('📱 Sending confirmation to customer...');
+      console.log('📱 Sending confirmation SMS to customer...');
       const customerMessage = `🎉 BOOKING CONFIRMED!
 
 ${therapist.first_name} ${therapist.last_name} has accepted your massage booking for ${new Date(booking.booking_time).toLocaleDateString()} at ${new Date(booking.booking_time).toLocaleTimeString()}.
@@ -278,6 +292,35 @@ Check your email for full details!
       console.log('❌ No valid customer phone number');
     }
 
+    // *** NEW: Send confirmation emails (copied from booking-response.js) ***
+    console.log('📧 Starting to send confirmation emails...');
+    
+    // Send email to customer
+    if (booking.customer_email) {
+      console.log('📧 Sending confirmation email to customer:', booking.customer_email);
+      try {
+        await sendClientConfirmationEmail(booking, therapist);
+        console.log('✅ Customer confirmation email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Error sending customer confirmation email:', emailError);
+      }
+    } else {
+      console.log('❌ No customer email found');
+    }
+
+    // Send email to therapist
+    if (therapist.email) {
+      console.log('📧 Sending confirmation email to therapist:', therapist.email);
+      try {
+        await sendTherapistConfirmationEmail(booking, therapist);
+        console.log('✅ Therapist confirmation email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Error sending therapist confirmation email:', emailError);
+      }
+    } else {
+      console.log('❌ No therapist email found');
+    }
+
     return { success: true, action: 'accepted' };
 
   } catch (error) {
@@ -287,7 +330,7 @@ Check your email for full details!
   }
 }
 
-// Handle SMS decline  
+// *** UPDATED: Handle SMS decline WITH EMAIL SENDING ***
 async function handleSMSDecline(booking, therapist, therapistPhone) {
   try {
     console.log('❌ Processing SMS decline for', booking.booking_id);
@@ -316,7 +359,7 @@ You've declined booking ${booking.booking_id}. The client has been notified.
 
     await sendSMS(therapistPhone, confirmMessage);
 
-    // Notify customer
+    // Notify customer via SMS
     const customerPhone = formatPhoneNumber(booking.customer_phone);
     if (customerPhone) {
       const customerMessage = `❌ BOOKING UPDATE
@@ -327,11 +370,153 @@ Unfortunately, your therapist declined booking ${booking.booking_id}. We're look
       await sendSMS(customerPhone, customerMessage);
     }
 
+    // *** NEW: Send decline email to customer ***
+    if (booking.customer_email) {
+      console.log('📧 Sending decline email to customer:', booking.customer_email);
+      try {
+        await sendClientDeclineEmail(booking);
+        console.log('✅ Customer decline email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Error sending customer decline email:', emailError);
+      }
+    }
+
     return { success: true, action: 'declined' };
 
   } catch (error) {
     console.error('❌ Error handling SMS decline:', error);
     await sendErrorSMS(therapistPhone, 'Error processing decline. Please contact support.');
+    return { success: false, error: error.message };
+  }
+}
+
+// *** NEW: Email functions (copied from booking-response.js) ***
+
+async function sendClientConfirmationEmail(booking, therapist) {
+  try {
+    console.log('📧 Preparing client confirmation email...');
+
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    }
+
+    const templateParams = {
+      to_email: booking.customer_email,
+      to_name: booking.first_name + ' ' + booking.last_name,
+      customer_name: booking.first_name + ' ' + booking.last_name,
+      booking_id: booking.booking_id,
+      service: serviceName,
+      duration: booking.duration_minutes + ' minutes',
+      date_time: new Date(booking.booking_time).toLocaleString(),
+      address: booking.address,
+      room_number: booking.room_number || 'N/A',
+      therapist: therapist.first_name + ' ' + therapist.last_name,
+      estimated_price: booking.price ? '$' + booking.price.toFixed(2) : 'N/A'
+    };
+
+    const result = await sendEmail(EMAILJS_BOOKING_CONFIRMED_TEMPLATE_ID, templateParams);
+    return result;
+
+  } catch (error) {
+    console.error('❌ Error in sendClientConfirmationEmail:', error);
+    throw error;
+  }
+}
+
+async function sendTherapistConfirmationEmail(booking, therapist) {
+  try {
+    console.log('📧 Preparing therapist confirmation email...');
+
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    }
+
+    const templateParams = {
+      to_email: therapist.email,
+      to_name: therapist.first_name + ' ' + therapist.last_name,
+      therapist_name: therapist.first_name + ' ' + therapist.last_name,
+      booking_id: booking.booking_id,
+      client_name: booking.first_name + ' ' + booking.last_name,
+      client_phone: booking.customer_phone || 'Not provided',
+      client_email: booking.customer_email,
+      service_name: serviceName,
+      duration: booking.duration_minutes + ' minutes',
+      booking_date: new Date(booking.booking_time).toLocaleDateString(),
+      booking_time: new Date(booking.booking_time).toLocaleTimeString(),
+      address: booking.address,
+      room_number: booking.room_number || 'N/A',
+      therapist_fee: booking.therapist_fee ? '$' + booking.therapist_fee.toFixed(2) : 'TBD'
+    };
+
+    const result = await sendEmail(EMAILJS_THERAPIST_CONFIRMED_TEMPLATE_ID, templateParams);
+    return result;
+
+  } catch (error) {
+    console.error('❌ Error in sendTherapistConfirmationEmail:', error);
+    throw error;
+  }
+}
+
+async function sendClientDeclineEmail(booking) {
+  try {
+    let serviceName = 'Massage Service';
+    if (booking.services && booking.services.name) {
+      serviceName = booking.services.name;
+    }
+
+    const templateParams = {
+      to_email: booking.customer_email,
+      to_name: booking.first_name + ' ' + booking.last_name,
+      customer_name: booking.first_name + ' ' + booking.last_name,
+      booking_id: booking.booking_id,
+      service: serviceName,
+      duration: booking.duration_minutes + ' minutes',
+      date_time: new Date(booking.booking_time).toLocaleString(),
+      address: booking.address
+    };
+
+    await sendEmail(EMAILJS_BOOKING_DECLINED_TEMPLATE_ID, templateParams);
+    console.log('📧 Decline email sent to client:', booking.customer_email);
+
+  } catch (error) {
+    console.error('❌ Error sending client decline email:', error);
+  }
+}
+
+async function sendEmail(templateId, templateParams) {
+  try {
+    if (!EMAILJS_PRIVATE_KEY) {
+      console.warn('⚠️ No private key found for EmailJS');
+      return { success: false, error: 'Private key required' };
+    }
+    
+    const emailData = {
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: templateId,
+      user_id: EMAILJS_PUBLIC_KEY,
+      accessToken: EMAILJS_PRIVATE_KEY,
+      template_params: templateParams
+    };
+
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emailData)
+    });
+
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      console.error('❌ EmailJS API error:', response.status, responseText);
+      return { success: false, error: 'EmailJS error: ' + response.status };
+    }
+
+    return { success: true, response: responseText };
+
+  } catch (error) {
+    console.error('❌ Error sending email:', error);
     return { success: false, error: error.message };
   }
 }
